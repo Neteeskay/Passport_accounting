@@ -8,5 +8,4 @@ venv/
 storage/*.db
 storage/uploads/*
 !storage/uploads/.gitkeep
-storage/backups/*
-!storage/backups/.gitkeep
+planning/task-adjustments.md

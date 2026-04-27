@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str = f"sqlite:///{(STORAGE_DIR / 'passport_accounting.db').as_posix()}"
     uploads_dir: Path = STORAGE_DIR / "uploads"
-    backups_dir: Path = STORAGE_DIR / "backups"
 
     model_config = SettingsConfigDict(
         env_file=".env",
