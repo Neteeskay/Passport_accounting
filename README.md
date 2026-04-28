@@ -76,6 +76,10 @@ storage/passport_accounting.db
 - `GET /api/v1/system/health` — системный health-check
 - `POST /api/v1/citizens` — создание новой карточки гражданина
 - `PUT /api/v1/citizens/{citizen_id}` — редактирование существующей карточки гражданина
+- `GET /api/v1/citizens/{citizen_id}/stamps` — выдача истории штампов гражданина
+- `POST /api/v1/citizens/{citizen_id}/stamps` — добавление нового штампа
+- `PUT /api/v1/citizens/{citizen_id}/stamps/{stamp_id}` — изменение существующего штампа
+- `DELETE /api/v1/citizens/{citizen_id}/stamps/{stamp_id}` — удаление штампа
 - `GET /docs` — Swagger UI
 
 ## Ближайшие шаги
