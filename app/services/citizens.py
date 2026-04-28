@@ -11,6 +11,10 @@ class RelatedUserNotFoundError(Exception):
     """Raised when created_by_user_id does not exist."""
 
 
+class CitizenNotFoundError(Exception):
+    """Raised when citizen record does not exist."""
+
+
 def _clean_text(value: str | None) -> str | None:
     if value is None:
         return None
@@ -88,7 +92,7 @@ def _fetch_citizen(connection: sqlite3.Connection, citizen_id: int) -> dict:
     ).fetchone()
 
     if row is None:
-        raise LookupError(f"Citizen with id={citizen_id} was not found.")
+        raise CitizenNotFoundError(f"Citizen with id={citizen_id} was not found.")
 
     citizen = dict(row)
     citizen["full_name"] = _full_name(row)
@@ -96,14 +100,50 @@ def _fetch_citizen(connection: sqlite3.Connection, citizen_id: int) -> dict:
     return citizen
 
 
+def _ensure_creator_exists(connection: sqlite3.Connection, creator_id: int | None) -> None:
+    if creator_id is not None and not _user_exists(connection, creator_id):
+        raise RelatedUserNotFoundError(f"User with id={creator_id} was not found.")
+
+
+def _insert_stamps(connection: sqlite3.Connection, citizen_id: int, stamps: list[dict]) -> None:
+    for stamp in stamps:
+        connection.execute(
+            """
+            INSERT INTO stamps (
+                citizen_id,
+                stamp_type,
+                stamp_placed_at,
+                stamp_authority,
+                stamp_note
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                citizen_id,
+                stamp["stamp_type"].strip(),
+                str(stamp["stamp_placed_at"]),
+                stamp["stamp_authority"].strip(),
+                _clean_text(stamp.get("stamp_note")),
+            ),
+        )
+
+
+def _handle_citizen_integrity_error(error: sqlite3.IntegrityError) -> None:
+    message = str(error)
+    if "UNIQUE constraint failed: citizens.passport_series, citizens.passport_number" in message:
+        raise CitizenConflictError(
+            "Citizen with the same passport series and number already exists."
+        ) from error
+
+    raise error
+
+
 def create_citizen(payload: dict) -> dict:
     citizen_data = _normalize_citizen_payload(payload)
     stamps = citizen_data.pop("stamps")
 
     with get_connection() as connection:
-        creator_id = citizen_data["created_by_user_id"]
-        if creator_id is not None and not _user_exists(connection, creator_id):
-            raise RelatedUserNotFoundError(f"User with id={creator_id} was not found.")
+        _ensure_creator_exists(connection, citizen_data["created_by_user_id"])
 
         try:
             cursor = connection.execute(
@@ -140,35 +180,68 @@ def create_citizen(payload: dict) -> dict:
                 ),
             )
         except sqlite3.IntegrityError as error:
-            message = str(error)
-            if "UNIQUE constraint failed: citizens.passport_series, citizens.passport_number" in message:
-                raise CitizenConflictError(
-                    "Citizen with the same passport series and number already exists."
-                ) from error
-            raise
+            _handle_citizen_integrity_error(error)
 
         citizen_id = int(cursor.lastrowid)
+        _insert_stamps(connection, citizen_id, stamps)
+        connection.commit()
+        return _fetch_citizen(connection, citizen_id)
 
-        for stamp in stamps:
+
+def update_citizen(citizen_id: int, payload: dict) -> dict:
+    citizen_data = _normalize_citizen_payload(payload)
+    stamps = citizen_data.pop("stamps")
+
+    with get_connection() as connection:
+        existing_row = connection.execute(
+            "SELECT id FROM citizens WHERE id = ? LIMIT 1",
+            (citizen_id,),
+        ).fetchone()
+        if existing_row is None:
+            raise CitizenNotFoundError(f"Citizen with id={citizen_id} was not found.")
+
+        _ensure_creator_exists(connection, citizen_data["created_by_user_id"])
+
+        try:
             connection.execute(
                 """
-                INSERT INTO stamps (
-                    citizen_id,
-                    stamp_type,
-                    stamp_placed_at,
-                    stamp_authority,
-                    stamp_note
-                )
-                VALUES (?, ?, ?, ?, ?)
+                UPDATE citizens
+                SET
+                    last_name = ?,
+                    first_name = ?,
+                    middle_name = ?,
+                    birth_date = ?,
+                    passport_series = ?,
+                    passport_number = ?,
+                    issue_date = ?,
+                    issued_by = ?,
+                    registration_address = ?,
+                    notes = ?,
+                    photo_path = ?,
+                    created_by_user_id = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
                 """,
                 (
+                    citizen_data["last_name"],
+                    citizen_data["first_name"],
+                    citizen_data["middle_name"],
+                    citizen_data["birth_date"],
+                    citizen_data["passport_series"],
+                    citizen_data["passport_number"],
+                    citizen_data["issue_date"],
+                    citizen_data["issued_by"],
+                    citizen_data["registration_address"],
+                    citizen_data["notes"],
+                    citizen_data["photo_path"],
+                    citizen_data["created_by_user_id"],
                     citizen_id,
-                    stamp["stamp_type"].strip(),
-                    str(stamp["stamp_placed_at"]),
-                    stamp["stamp_authority"].strip(),
-                    _clean_text(stamp.get("stamp_note")),
                 ),
             )
+        except sqlite3.IntegrityError as error:
+            _handle_citizen_integrity_error(error)
 
+        connection.execute("DELETE FROM stamps WHERE citizen_id = ?", (citizen_id,))
+        _insert_stamps(connection, citizen_id, stamps)
         connection.commit()
         return _fetch_citizen(connection, citizen_id)

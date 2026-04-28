@@ -26,6 +26,10 @@ class CitizenCreateRequest(BaseModel):
     stamps: list[StampCreate] = Field(default_factory=list)
 
 
+class CitizenUpdateRequest(CitizenCreateRequest):
+    pass
+
+
 class StampResponse(BaseModel):
     id: int
     stamp_type: str

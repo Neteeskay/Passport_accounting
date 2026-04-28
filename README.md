@@ -75,6 +75,7 @@ storage/passport_accounting.db
 - `GET /health` — быстрая проверка доступности
 - `GET /api/v1/system/health` — системный health-check
 - `POST /api/v1/citizens` — создание новой карточки гражданина
+- `PUT /api/v1/citizens/{citizen_id}` — редактирование существующей карточки гражданина
 - `GET /docs` — Swagger UI
 
 ## Ближайшие шаги
