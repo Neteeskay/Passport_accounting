@@ -1,4 +1,5 @@
 import { Download, UsersRound } from "lucide-react";
+import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -26,6 +27,14 @@ export default function CitizensPage() {
         </section>
 
         <CitizensToolbar />
+
+        <section className="mt-6">
+          <div className="flex flex-col gap-4">
+            {mockCitizens.map((citizen) => (
+              <CitizenCard citizen={citizen} key={citizen.id} />
+            ))}
+          </div>
+        </section>
       </main>
     </AppShell>
   );
