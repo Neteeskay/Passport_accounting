@@ -74,6 +74,7 @@ storage/passport_accounting.db
 - `GET /` — краткая информация о сервисе
 - `GET /health` — быстрая проверка доступности
 - `GET /api/v1/system/health` — системный health-check
+- `POST /api/v1/citizens` — создание новой карточки гражданина
 - `GET /docs` — Swagger UI
 
 ## Ближайшие шаги
