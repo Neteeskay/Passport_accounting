@@ -1,25 +1,22 @@
 from functools import lru_cache
+import os
 from pathlib import Path
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 STORAGE_DIR = BASE_DIR / "storage"
 
 
-class Settings(BaseSettings):
-    project_name: str = "Passport Accounting API"
-    project_version: str = "0.1.0"
-    api_v1_prefix: str = "/api/v1"
-    debug: bool = False
-    database_url: str = f"sqlite:///{(STORAGE_DIR / 'passport_accounting.db').as_posix()}"
-    uploads_dir: Path = STORAGE_DIR / "uploads"
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+class Settings:
+    def __init__(self) -> None:
+        self.project_name = os.getenv("PROJECT_NAME", "Passport Accounting API")
+        self.project_version = os.getenv("PROJECT_VERSION", "0.1.0")
+        self.api_v1_prefix = os.getenv("API_V1_PREFIX", "/api/v1")
+        self.debug = os.getenv("DEBUG", "false").lower() == "true"
+        self.database_url = os.getenv(
+            "DATABASE_URL",
+            f"sqlite:///{(STORAGE_DIR / 'passport_accounting.db').as_posix()}",
+        )
+        self.uploads_dir = STORAGE_DIR / "uploads"
 
 
 @lru_cache

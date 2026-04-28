@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.db.session import prepare_storage
+from app.db.session import initialize_database, prepare_storage
 from app.services.system import build_health_payload, build_service_info
 
 settings = get_settings()
@@ -13,6 +13,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     prepare_storage()
+    initialize_database()
     yield
 
 
