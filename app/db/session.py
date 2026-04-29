@@ -3,6 +3,7 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.db.schema import ALL_SCHEMA_STATEMENTS
+from app.services.auth import seed_default_users
 
 
 def prepare_storage() -> None:
@@ -33,6 +34,7 @@ def initialize_database() -> None:
     with get_connection() as connection:
         for statement in ALL_SCHEMA_STATEMENTS:
             connection.execute(statement)
+        seed_default_users(connection)
         connection.commit()
 
 
