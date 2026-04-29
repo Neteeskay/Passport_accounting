@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,6 +29,20 @@ class CitizenCreateRequest(BaseModel):
 
 class CitizenUpdateRequest(CitizenCreateRequest):
     pass
+
+
+class CitizenListQuery(BaseModel):
+    search: str | None = Field(default=None, max_length=200)
+    birth_date: date | None = None
+    registration_address: str | None = Field(default=None, max_length=500)
+    passport_series: str | None = Field(default=None, max_length=20)
+    passport_number: str | None = Field(default=None, max_length=20)
+    sort_by: Literal["full_name", "birth_date", "created_at", "updated_at", "passport_series"] = (
+        "full_name"
+    )
+    sort_order: Literal["asc", "desc"] = "asc"
+    limit: int = Field(default=50, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
 
 
 class StampResponse(BaseModel):
@@ -61,3 +76,26 @@ class CitizenResponse(BaseModel):
     stamps: list[StampResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CitizenListItemResponse(BaseModel):
+    id: int
+    last_name: str
+    first_name: str
+    middle_name: str | None = None
+    full_name: str
+    birth_date: date
+    passport_series: str
+    passport_number: str
+    registration_address: str
+    photo_path: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    stamp_count: int
+
+
+class CitizenListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[CitizenListItemResponse]

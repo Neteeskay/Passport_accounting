@@ -79,6 +79,7 @@ storage/passport_accounting.db
 - `POST /api/v1/auth/login` — вход пользователя по логину и паролю
 - `GET /api/v1/auth/me` — данные текущего авторизованного пользователя
 - `POST /api/v1/auth/logout` — завершение текущего пользовательского сеанса
+- `GET /api/v1/citizens` — поиск, фильтрация и сортировка списка граждан
 - `POST /api/v1/citizens` — создание новой карточки гражданина
 - `PUT /api/v1/citizens/{citizen_id}` — редактирование существующей карточки гражданина
 - `GET /api/v1/citizens/{citizen_id}/stamps` — выдача истории штампов гражданина
@@ -93,6 +94,19 @@ storage/passport_accounting.db
 - `operator` имеет доступ к рабочим разделам, связанным с гражданами и штампами
 - маршруты `citizens` и `stamps` требуют авторизации и доступны ролям `admin` и `operator`
 - маршрут `system/admin` доступен только роли `admin`
+
+## Поиск граждан
+
+Маршрут `GET /api/v1/citizens` поддерживает:
+
+- `search` — поиск по ФИО, серии и номеру паспорта
+- `birth_date` — фильтр по дате рождения
+- `registration_address` — фильтр по адресу регистрации
+- `passport_series` — фильтр по серии паспорта
+- `passport_number` — фильтр по номеру паспорта
+- `sort_by` — сортировка по `full_name`, `birth_date`, `created_at`, `updated_at`, `passport_series`
+- `sort_order` — порядок `asc` или `desc`
+- `limit`, `offset` — ограничение и смещение для списка
 
 ## Ближайшие шаги
 
