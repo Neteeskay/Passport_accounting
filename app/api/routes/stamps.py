@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
+from app.api.dependencies.auth import require_roles
 from app.schemas.citizens import StampCreate, StampResponse
 from app.services.stamps import (
     CitizenNotFoundError,
@@ -11,7 +12,7 @@ from app.services.stamps import (
     update_stamp,
 )
 
-router = APIRouter(tags=["stamps"])
+router = APIRouter(tags=["stamps"], dependencies=[Depends(require_roles("admin", "operator"))])
 
 
 @router.get("", response_model=list[StampResponse])

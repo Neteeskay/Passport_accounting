@@ -25,6 +25,10 @@ class RevokedTokenError(Exception):
     """Raised when token is no longer active."""
 
 
+class AuthorizationError(Exception):
+    """Raised when user role is not allowed for the target section."""
+
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
@@ -255,6 +259,16 @@ def logout_user(token: str) -> None:
             (token_id,),
         )
         connection.commit()
+
+
+def ensure_user_role(user: dict, allowed_roles: tuple[str, ...]) -> dict:
+    if str(user["role"]) not in allowed_roles:
+        allowed = ", ".join(allowed_roles)
+        raise AuthorizationError(
+            f"Access denied for role '{user['role']}'. Allowed roles: {allowed}."
+        )
+
+    return user
 
 
 def seed_default_users(connection: sqlite3.Connection) -> None:

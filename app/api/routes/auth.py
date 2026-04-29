@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.schemas.auth import LoginRequest, LoginResponse, LogoutResponse
+from app.api.dependencies.auth import get_bearer_token, get_current_user
+from app.schemas.auth import AuthUserResponse, LoginRequest, LoginResponse, LogoutResponse
 from app.services.auth import (
     AuthenticationError,
     InactiveUserError,
@@ -11,7 +11,6 @@ from app.services.auth import (
 )
 
 router = APIRouter(tags=["auth"])
-bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -26,18 +25,15 @@ def login(payload: LoginRequest) -> LoginResponse:
     return LoginResponse(**result)
 
 
-@router.post("/logout", response_model=LogoutResponse)
-def logout(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> LogoutResponse:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Bearer access token is required.",
-        )
+@router.get("/me", response_model=AuthUserResponse)
+def read_current_user(current_user: dict = Depends(get_current_user)) -> AuthUserResponse:
+    return AuthUserResponse(**current_user)
 
+
+@router.post("/logout", response_model=LogoutResponse)
+def logout(token: str = Depends(get_bearer_token)) -> LogoutResponse:
     try:
-        logout_user(credentials.credentials)
+        logout_user(token)
     except (AuthenticationError, RevokedTokenError) as error:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
 

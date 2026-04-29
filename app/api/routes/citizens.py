@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.api.dependencies.auth import require_roles
 from app.schemas.citizens import CitizenCreateRequest, CitizenResponse, CitizenUpdateRequest
 from app.services.citizens import (
     CitizenConflictError,
@@ -9,7 +10,7 @@ from app.services.citizens import (
     update_citizen,
 )
 
-router = APIRouter(tags=["citizens"])
+router = APIRouter(tags=["citizens"], dependencies=[Depends(require_roles("admin", "operator"))])
 
 
 @router.post("", response_model=CitizenResponse, status_code=status.HTTP_201_CREATED)
