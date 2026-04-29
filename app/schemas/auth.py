@@ -23,3 +23,7 @@ class LoginResponse(BaseModel):
     token_type: str
     expires_in: int
     user: AuthUserResponse
+
+
+class LogoutResponse(BaseModel):
+    message: str

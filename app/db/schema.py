@@ -16,6 +16,23 @@ USER_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);",
 ]
 
+AUTH_TOKEN_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_id TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    revoked_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+"""
+
+AUTH_TOKEN_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);",
+    "CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);",
+]
+
 CITIZEN_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS citizens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +82,8 @@ STAMP_INDEXES_SQL = [
 ALL_SCHEMA_STATEMENTS = [
     USER_TABLE_SQL,
     *USER_INDEXES_SQL,
+    AUTH_TOKEN_TABLE_SQL,
+    *AUTH_TOKEN_INDEXES_SQL,
     CITIZEN_TABLE_SQL,
     *CITIZEN_INDEXES_SQL,
     STAMP_TABLE_SQL,

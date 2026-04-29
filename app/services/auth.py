@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 import time
+from uuid import uuid4
 
 from app.core.config import get_settings
 
@@ -18,6 +19,10 @@ class AuthenticationError(Exception):
 
 class InactiveUserError(Exception):
     """Raised when user exists but is inactive."""
+
+
+class RevokedTokenError(Exception):
+    """Raised when token is no longer active."""
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -61,13 +66,15 @@ def verify_password(password: str, password_hash: str) -> bool:
     return hmac.compare_digest(digest, expected_digest)
 
 
-def create_access_token(user: dict) -> tuple[str, int]:
+def create_access_token(user: dict) -> tuple[str, int, dict]:
     settings = get_settings()
     expires_in = settings.access_token_ttl_minutes * 60
     now = int(time.time())
+    token_id = uuid4().hex
 
     header = {"alg": "HS256", "typ": "JWT"}
     payload = {
+        "jti": token_id,
         "sub": str(user["id"]),
         "username": user["username"],
         "role": user["role"],
@@ -88,7 +95,7 @@ def create_access_token(user: dict) -> tuple[str, int]:
         hashlib.sha256,
     ).digest()
     token = f"{encoded_header}.{encoded_payload}.{_b64url_encode(signature)}"
-    return token, expires_in
+    return token, expires_in, payload
 
 
 def decode_access_token(token: str) -> dict:
@@ -114,6 +121,28 @@ def decode_access_token(token: str) -> dict:
         raise AuthenticationError("Access token has expired.")
 
     return payload
+
+
+def _store_token(connection: sqlite3.Connection, payload: dict) -> None:
+    connection.execute(
+        """
+        INSERT INTO auth_tokens (token_id, user_id, expires_at)
+        VALUES (?, ?, ?)
+        """,
+        (payload["jti"], int(payload["sub"]), int(payload["exp"])),
+    )
+
+
+def _get_active_token_row(connection: sqlite3.Connection, token_id: str) -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT id, token_id, user_id, expires_at, revoked_at, created_at
+        FROM auth_tokens
+        WHERE token_id = ?
+        LIMIT 1
+        """,
+        (token_id,),
+    ).fetchone()
 
 
 def _serialize_user(row: sqlite3.Row) -> dict:
@@ -152,13 +181,80 @@ def authenticate_user(username: str, password: str) -> dict:
             raise InactiveUserError("User account is inactive.")
 
         user = _serialize_user(user_row)
-        token, expires_in = create_access_token(user)
+        token, expires_in, payload = create_access_token(user)
+        _store_token(connection, payload)
+        connection.commit()
         return {
             "access_token": token,
             "token_type": "bearer",
             "expires_in": expires_in,
             "user": user,
         }
+
+
+def validate_access_token(token: str) -> dict:
+    from app.db.session import get_connection
+
+    payload = decode_access_token(token)
+    token_id = str(payload.get("jti", ""))
+    if not token_id:
+        raise AuthenticationError("Access token does not contain jti.")
+
+    with get_connection() as connection:
+        token_row = _get_active_token_row(connection, token_id)
+        if token_row is None:
+            raise AuthenticationError("Access token is unknown.")
+
+        if token_row["revoked_at"] is not None:
+            raise RevokedTokenError("Access token has been revoked.")
+
+        user_row = connection.execute(
+            """
+            SELECT id, username, full_name, role, is_active, created_at, updated_at
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (int(payload["sub"]),),
+        ).fetchone()
+
+        if user_row is None:
+            raise AuthenticationError("User for this access token was not found.")
+
+        if not bool(user_row["is_active"]):
+            raise InactiveUserError("User account is inactive.")
+
+        return {
+            "token_payload": payload,
+            "user": _serialize_user(user_row),
+        }
+
+
+def logout_user(token: str) -> None:
+    from app.db.session import get_connection
+
+    payload = decode_access_token(token)
+    token_id = str(payload.get("jti", ""))
+    if not token_id:
+        raise AuthenticationError("Access token does not contain jti.")
+
+    with get_connection() as connection:
+        token_row = _get_active_token_row(connection, token_id)
+        if token_row is None:
+            raise AuthenticationError("Access token is unknown.")
+
+        if token_row["revoked_at"] is not None:
+            raise RevokedTokenError("Access token has already been revoked.")
+
+        connection.execute(
+            """
+            UPDATE auth_tokens
+            SET revoked_at = CURRENT_TIMESTAMP
+            WHERE token_id = ?
+            """,
+            (token_id,),
+        )
+        connection.commit()
 
 
 def seed_default_users(connection: sqlite3.Connection) -> None:
