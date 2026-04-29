@@ -80,6 +80,7 @@ storage/passport_accounting.db
 - `GET /api/v1/auth/me` — данные текущего авторизованного пользователя
 - `POST /api/v1/auth/logout` — завершение текущего пользовательского сеанса
 - `GET /api/v1/citizens` — поиск, фильтрация и сортировка списка граждан
+- `GET /api/v1/citizens/{citizen_id}/pdf` — экспорт карточки гражданина в PDF
 - `POST /api/v1/citizens` — создание новой карточки гражданина
 - `PUT /api/v1/citizens/{citizen_id}` — редактирование существующей карточки гражданина
 - `GET /api/v1/citizens/{citizen_id}/stamps` — выдача истории штампов гражданина
@@ -107,6 +108,16 @@ storage/passport_accounting.db
 - `sort_by` — сортировка по `full_name`, `birth_date`, `created_at`, `updated_at`, `passport_series`
 - `sort_order` — порядок `asc` или `desc`
 - `limit`, `offset` — ограничение и смещение для списка
+
+## Экспорт в PDF
+
+Маршрут `GET /api/v1/citizens/{citizen_id}/pdf` формирует PDF-документ карточки гражданина и включает:
+
+- основные персональные и паспортные данные;
+- адрес регистрации;
+- заметки;
+- сведения о штампах;
+- фотографию, если путь к файлу существует и изображение доступно.
 
 ## Ближайшие шаги
 

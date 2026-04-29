@@ -1,6 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 
 from app.api.dependencies.auth import require_roles
 from app.schemas.citizens import (
@@ -9,11 +10,13 @@ from app.schemas.citizens import (
     CitizenResponse,
     CitizenUpdateRequest,
 )
+from app.services.pdf_export import build_citizen_pdf, build_citizen_pdf_filename
 from app.services.citizens import (
     CitizenConflictError,
     CitizenNotFoundError,
     RelatedUserNotFoundError,
     create_citizen,
+    get_citizen,
     list_citizens,
     update_citizen,
 )
@@ -47,6 +50,22 @@ def list_citizens_endpoint(
         }
     )
     return CitizenListResponse(**result)
+
+
+@router.get("/{citizen_id}/pdf")
+def export_citizen_pdf(citizen_id: int) -> Response:
+    try:
+        citizen = get_citizen(citizen_id)
+    except CitizenNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    pdf_bytes = build_citizen_pdf(citizen)
+    filename = build_citizen_pdf_filename(citizen)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("", response_model=CitizenResponse, status_code=status.HTTP_201_CREATED)

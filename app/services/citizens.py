@@ -330,6 +330,11 @@ def list_citizens(filters: dict | None = None) -> dict:
         }
 
 
+def get_citizen(citizen_id: int) -> dict:
+    with get_connection() as connection:
+        return _fetch_citizen(connection, citizen_id)
+
+
 def update_citizen(citizen_id: int, payload: dict) -> dict:
     citizen_data = _normalize_citizen_payload(payload)
     stamps = citizen_data.pop("stamps")
