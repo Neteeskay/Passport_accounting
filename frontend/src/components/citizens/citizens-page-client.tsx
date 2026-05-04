@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
 import { CitizenFormModal } from "@/components/citizens/form/citizen-form-modal";
+import { CitizensRegistryModal } from "@/components/citizens/registry/citizens-registry-modal";
 import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -21,6 +22,7 @@ export function CitizensPageClient() {
   const logout = useAuthStore((state) => state.logout);
   const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
 
   const totalCount = citizens.length;
@@ -65,6 +67,7 @@ export function CitizensPageClient() {
             <button
               className="flex h-[92px] flex-col items-center justify-center rounded-[16px] border border-border bg-card text-[13px] shadow-soft transition hover:bg-muted"
               type="button"
+              onClick={() => setIsRegistryOpen(true)}
             >
               <Download className="mb-3 h-5 w-5" />
               Скачать реестр
@@ -97,6 +100,11 @@ export function CitizensPageClient() {
         citizen={selectedCitizen}
         open={Boolean(selectedCitizen)}
         onClose={() => setSelectedCitizen(null)}
+      />
+      <CitizensRegistryModal
+        citizens={citizens}
+        open={isRegistryOpen}
+        onClose={() => setIsRegistryOpen(false)}
       />
     </>
   );

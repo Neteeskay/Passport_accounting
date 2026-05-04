@@ -3,6 +3,7 @@
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CitizenPassportPreview } from "@/components/citizens/detail/citizen-passport-preview";
+import { ModalOverlay } from "@/components/ui/modal-overlay";
 import type { Citizen } from "@/types/citizen";
 
 type CitizenDetailModalProps = {
@@ -21,8 +22,8 @@ export function CitizenDetailModal({ citizen, open, onClose }: CitizenDetailModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-10">
-      <div className="relative flex h-[86vh] w-full max-w-[1040px] flex-col rounded-[22px] bg-card shadow-[0_30px_80px_rgba(0,0,0,0.22)]">
+    <ModalOverlay className="items-start justify-center px-4 py-10" contentClassName="w-full max-w-[1040px]">
+      <div className="flex h-[86vh] w-full flex-col rounded-[22px] bg-card shadow-[0_30px_80px_rgba(0,0,0,0.22)]">
         <div className="flex items-center justify-between px-7 pb-4 pt-6">
           <h2 className="text-[20px] font-semibold text-card-foreground">Карточка гражданина</h2>
           <button
@@ -52,6 +53,6 @@ export function CitizenDetailModal({ citizen, open, onClose }: CitizenDetailModa
           </Button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
