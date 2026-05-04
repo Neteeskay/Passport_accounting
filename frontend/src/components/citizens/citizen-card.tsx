@@ -13,9 +13,10 @@ import type { Citizen } from "@/types/citizen";
 
 type CitizenCardProps = {
   citizen: Citizen;
+  onView?: (citizen: Citizen) => void;
 };
 
-export function CitizenCard({ citizen }: CitizenCardProps) {
+export function CitizenCard({ citizen, onView }: CitizenCardProps) {
   const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
   const genderLabel = citizen.gender === "male" ? "М" : "Ж";
   const stampLabels = citizen.stamps.map((stamp) => stamp.comment).filter(Boolean).slice(0, 4) as string[];
@@ -71,7 +72,11 @@ export function CitizenCard({ citizen }: CitizenCardProps) {
 
       <div className="mt-4 border-t border-border pt-4">
         <div className="flex items-center justify-end gap-6 text-[14px]">
-          <button className="inline-flex items-center gap-2 text-foreground transition hover:text-primary" type="button">
+          <button
+            className="inline-flex items-center gap-2 text-foreground transition hover:text-primary"
+            type="button"
+            onClick={() => onView?.(citizen)}
+          >
             <Eye className="h-4 w-4" />
             Просмотр
           </button>
