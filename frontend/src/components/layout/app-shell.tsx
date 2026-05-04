@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 
 type AppShellProps = {
   children: React.ReactNode;
+  onAddCitizen?: () => void;
 };
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, onAddCitizen }: AppShellProps) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-card">
@@ -47,7 +48,7 @@ export function AppShell({ children }: AppShellProps) {
             >
               <LogOut className="h-4 w-4" />
             </button>
-            <Button className="h-10 rounded-[16px] px-5 text-[14px]">
+            <Button className="h-10 rounded-[16px] px-5 text-[14px]" onClick={onAddCitizen}>
               <Plus className="h-4 w-4" />
               Добавить
             </Button>
