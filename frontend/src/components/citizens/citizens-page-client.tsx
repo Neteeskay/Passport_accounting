@@ -1,6 +1,7 @@
 "use client";
 
 import { Download, UsersRound } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
@@ -10,10 +11,14 @@ import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { mockCitizens } from "@/lib/mock-data/citizens";
 import { buildCitizenFromForm } from "@/lib/utils/citizen-form";
+import { useAuthStore } from "@/store/auth-store";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
 export function CitizensPageClient() {
+  const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
@@ -29,9 +34,29 @@ export function CitizensPageClient() {
     setIsCreateOpen(false);
   };
 
+  const handleDeleteCitizen = (citizen: Citizen) => {
+    const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
+
+    if (window.confirm(`Удалить запись гражданина ${fullName}?`)) {
+      setCitizens((current) => current.filter((item) => item.id !== citizen.id));
+    }
+  };
+
+  const isAdmin = currentUser?.role === "admin" || !currentUser;
+  const roleLabel = currentUser?.role === "operator" ? "Оператор" : "Администратор";
+
   return (
     <>
-      <AppShell onAddCitizen={() => setIsCreateOpen(true)}>
+      <AppShell
+        onAddCitizen={() => setIsCreateOpen(true)}
+        onLogout={() => {
+          logout();
+          router.push("/login");
+        }}
+        showAdminLink={isAdmin}
+        userName={currentUser?.fullName ?? "Администратор"}
+        userRole={roleLabel}
+      >
         <main>
           <section className="grid grid-cols-4 gap-3">
             <StatCard icon={UsersRound} label="Всего записей" value={totalCount} />
@@ -51,7 +76,12 @@ export function CitizensPageClient() {
           <section className="mt-6">
             <div className="flex flex-col gap-4">
               {citizens.map((citizen) => (
-                <CitizenCard citizen={citizen} key={citizen.id} onView={setSelectedCitizen} />
+                <CitizenCard
+                  citizen={citizen}
+                  key={citizen.id}
+                  onDelete={isAdmin ? handleDeleteCitizen : undefined}
+                  onView={setSelectedCitizen}
+                />
               ))}
             </div>
           </section>
