@@ -1,4 +1,5 @@
-import { LogOut, Moon, Plus, Settings, Shield } from "lucide-react";
+import { LogOut, Plus, Settings, Shield } from "lucide-react";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 type AppShellProps = {
@@ -24,14 +25,7 @@ export function AppShell({ children, onAddCitizen }: AppShellProps) {
           </div>
 
           <nav className="flex items-center gap-4" aria-label="Основная навигация">
-            <button
-              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
-              type="button"
-              aria-label="Режим отображения"
-              title="Режим отображения"
-            >
-              <Moon className="h-4 w-4" />
-            </button>
+            <ThemeToggle />
             <button
               className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
               type="button"
