@@ -15,7 +15,6 @@ export const mockCitizens: Citizen[] = [
     passportIssuedDate: "2015-03-18",
     departmentCode: "000-000",
     registrationAddress: "г. Донецк, ул. Пушкина, д.30, кв.30",
-    actualAddress: "г. Донецк, ул. Пушкина, д.30, кв.30",
     phone: "",
     photoUrl: "",
     stamps: [
