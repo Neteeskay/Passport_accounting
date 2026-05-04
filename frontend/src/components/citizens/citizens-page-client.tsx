@@ -3,6 +3,7 @@
 import { Download, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { CitizenCard } from "@/components/citizens/citizen-card";
+import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
 import { CitizenFormModal } from "@/components/citizens/form/citizen-form-modal";
 import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
@@ -15,6 +16,7 @@ import type { Citizen } from "@/types/citizen";
 export function CitizensPageClient() {
   const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
 
   const totalCount = citizens.length;
   const maleCount = citizens.filter((citizen) => citizen.gender === "male").length;
@@ -49,7 +51,7 @@ export function CitizensPageClient() {
           <section className="mt-6">
             <div className="flex flex-col gap-4">
               {citizens.map((citizen) => (
-                <CitizenCard citizen={citizen} key={citizen.id} />
+                <CitizenCard citizen={citizen} key={citizen.id} onView={setSelectedCitizen} />
               ))}
             </div>
           </section>
@@ -60,6 +62,11 @@ export function CitizensPageClient() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateCitizen}
+      />
+      <CitizenDetailModal
+        citizen={selectedCitizen}
+        open={Boolean(selectedCitizen)}
+        onClose={() => setSelectedCitizen(null)}
       />
     </>
   );
