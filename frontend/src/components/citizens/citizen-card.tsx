@@ -14,9 +14,10 @@ import type { Citizen } from "@/types/citizen";
 type CitizenCardProps = {
   citizen: Citizen;
   onView?: (citizen: Citizen) => void;
+  onDelete?: (citizen: Citizen) => void;
 };
 
-export function CitizenCard({ citizen, onView }: CitizenCardProps) {
+export function CitizenCard({ citizen, onView, onDelete }: CitizenCardProps) {
   const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
   const genderLabel = citizen.gender === "male" ? "М" : "Ж";
   const stampLabels = citizen.stamps.map((stamp) => stamp.comment).filter(Boolean).slice(0, 4) as string[];
@@ -84,10 +85,16 @@ export function CitizenCard({ citizen, onView }: CitizenCardProps) {
             <Pencil className="h-4 w-4" />
             Изменить
           </button>
-          <button className="inline-flex items-center gap-2 text-destructive transition hover:text-destructive/80" type="button">
-            <Trash2 className="h-4 w-4" />
-            Удалить
-          </button>
+          {onDelete ? (
+            <button
+              className="inline-flex items-center gap-2 text-destructive transition hover:text-destructive/80"
+              type="button"
+              onClick={() => onDelete(citizen)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Удалить
+            </button>
+          ) : null}
         </div>
       </div>
     </article>

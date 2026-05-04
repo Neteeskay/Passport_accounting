@@ -1,13 +1,25 @@
 import { LogOut, Plus, Settings, Shield } from "lucide-react";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 type AppShellProps = {
   children: React.ReactNode;
   onAddCitizen?: () => void;
+  onLogout?: () => void;
+  showAdminLink?: boolean;
+  userName?: string;
+  userRole?: string;
 };
 
-export function AppShell({ children, onAddCitizen }: AppShellProps) {
+export function AppShell({
+  children,
+  onAddCitizen,
+  onLogout,
+  showAdminLink = false,
+  userName = "Администратор",
+  userRole = "Администратор"
+}: AppShellProps) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-card">
@@ -18,27 +30,28 @@ export function AppShell({ children, onAddCitizen }: AppShellProps) {
             </div>
             <div>
               <p className="text-[20px] font-bold leading-5">Паспортный учёт</p>
-              <p className="mt-1 text-[13px] leading-4 text-foreground">
-                Администратор • Администратор
-              </p>
+              <p className="mt-1 text-[13px] leading-4 text-foreground">{userName} • {userRole}</p>
             </div>
           </div>
 
           <nav className="flex items-center gap-4" aria-label="Основная навигация">
             <ThemeToggle />
-            <button
-              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
-              type="button"
-              aria-label="Настройки"
-              title="Настройки"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
+            {showAdminLink ? (
+              <Link
+                className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
+                href="/admin/users"
+                aria-label="Управление пользователями"
+                title="Управление пользователями"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
+            ) : null}
             <button
               className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
               type="button"
               aria-label="Выйти"
               title="Выйти"
+              onClick={onLogout}
             >
               <LogOut className="h-4 w-4" />
             </button>
