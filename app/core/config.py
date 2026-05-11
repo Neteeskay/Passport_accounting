@@ -6,12 +6,22 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 STORAGE_DIR = BASE_DIR / "storage"
 
 
+def _parse_csv_env(value: str) -> list[str]:
+    items = [item.strip() for item in value.split(",")]
+    filtered = [item for item in items if item]
+    return filtered or ["*"]
+
+
 class Settings:
     def __init__(self) -> None:
         self.project_name = os.getenv("PROJECT_NAME", "Passport Accounting API")
         self.project_version = os.getenv("PROJECT_VERSION", "0.1.0")
         self.api_v1_prefix = os.getenv("API_V1_PREFIX", "/api/v1")
         self.debug = os.getenv("DEBUG", "false").lower() == "true"
+        self.cors_allow_origins = _parse_csv_env(os.getenv("CORS_ALLOW_ORIGINS", "*"))
+        self.cors_allow_credentials = (
+            os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+        )
         self.auth_secret = os.getenv("AUTH_SECRET", "change-me-in-production")
         self.access_token_ttl_minutes = int(os.getenv("ACCESS_TOKEN_TTL_MINUTES", "720"))
         self.database_url = os.getenv(

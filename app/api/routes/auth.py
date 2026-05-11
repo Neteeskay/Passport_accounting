@@ -1,13 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies.auth import get_bearer_token, get_current_user
-from app.schemas.auth import AuthUserResponse, LoginRequest, LoginResponse, LogoutResponse
+from app.api.dependencies.auth import get_bearer_token, get_current_user, require_roles
+from app.schemas.auth import (
+    AuthUserResponse,
+    CreateUserRequest,
+    LoginRequest,
+    LoginResponse,
+    LogoutResponse,
+)
 from app.services.auth import (
     AuthenticationError,
     InactiveUserError,
     RevokedTokenError,
     authenticate_user,
+    create_user,
     logout_user,
+    UserConflictError,
 )
 
 router = APIRouter(tags=["auth"])
@@ -23,6 +31,19 @@ def login(payload: LoginRequest) -> LoginResponse:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
 
     return LoginResponse(**result)
+
+
+@router.post("/users", response_model=AuthUserResponse, status_code=status.HTTP_201_CREATED)
+def create_user_by_admin(
+    payload: CreateUserRequest,
+    _current_admin: dict = Depends(require_roles("admin")),
+) -> AuthUserResponse:
+    try:
+        user = create_user(payload.model_dump())
+    except UserConflictError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+    return AuthUserResponse(**user)
 
 
 @router.get("/me", response_model=AuthUserResponse)

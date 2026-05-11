@@ -29,6 +29,10 @@ class AuthorizationError(Exception):
     """Raised when user role is not allowed for the target section."""
 
 
+class UserConflictError(Exception):
+    """Raised when a user with the same username already exists."""
+
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
@@ -171,6 +175,51 @@ def find_user_by_username(connection: sqlite3.Connection, username: str) -> sqli
         """,
         (username.strip(),),
     ).fetchone()
+
+
+def create_user(payload: dict) -> dict:
+    from app.db.session import get_connection
+
+    username = payload["username"].strip()
+    full_name = payload["full_name"].strip()
+    role = str(payload["role"]).strip()
+    is_active = bool(payload.get("is_active", True))
+
+    with get_connection() as connection:
+        existing = find_user_by_username(connection, username)
+        if existing is not None:
+            raise UserConflictError(f"User with username '{username}' already exists.")
+
+        cursor = connection.execute(
+            """
+            INSERT INTO users (username, password_hash, full_name, role, is_active)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                username,
+                hash_password(payload["password"]),
+                full_name,
+                role,
+                int(is_active),
+            ),
+        )
+        user_id = int(cursor.lastrowid)
+        connection.commit()
+
+        user_row = connection.execute(
+            """
+            SELECT id, username, full_name, role, is_active, created_at, updated_at
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+
+        if user_row is None:
+            raise AuthenticationError("Newly created user could not be loaded.")
+
+        return _serialize_user(user_row)
 
 
 def authenticate_user(username: str, password: str) -> dict:
