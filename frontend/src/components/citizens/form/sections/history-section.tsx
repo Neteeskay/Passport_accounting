@@ -1,10 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
-import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
-import { digitsOnly, formatDateInput, formatDepartmentCode } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 const passportHistoryOptions = [
@@ -103,19 +101,19 @@ export function HistorySection({ control, register, errors }: HistorySectionProp
 
             <div className="mt-4 grid grid-cols-3 gap-4">
               <FormField label="Серия" error={errors.historyRecords?.[index]?.series?.message}>
-                <FormattedInput formatter={(value) => digitsOnly(value, 4)} inputMode="numeric" placeholder="4510" registration={register(`historyRecords.${index}.series`)} />
+                <Input placeholder="4510" {...register(`historyRecords.${index}.series`)} />
               </FormField>
               <FormField label="Номер" error={errors.historyRecords?.[index]?.number?.message}>
-                <FormattedInput formatter={(value) => digitsOnly(value, 6)} inputMode="numeric" placeholder="123456" registration={register(`historyRecords.${index}.number`)} />
+                <Input placeholder="123456" {...register(`historyRecords.${index}.number`)} />
               </FormField>
               <FormField label="Код подразделения" error={errors.historyRecords?.[index]?.departmentCode?.message}>
-                <FormattedInput formatter={formatDepartmentCode} inputMode="numeric" placeholder="770-001" registration={register(`historyRecords.${index}.departmentCode`)} />
+                <Input placeholder="770-001" {...register(`historyRecords.${index}.departmentCode`)} />
               </FormField>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-4">
               <FormField label="Дата выдачи" error={errors.historyRecords?.[index]?.issueDate?.message}>
-                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="дд.мм.гггг" registration={register(`historyRecords.${index}.issueDate`)} />
+                <Input placeholder="дд.мм.гггг" {...register(`historyRecords.${index}.issueDate`)} />
               </FormField>
               <FormField label="Кем выдан" error={errors.historyRecords?.[index]?.authority?.message}>
                 <Input placeholder="ОВД района..." {...register(`historyRecords.${index}.authority`)} />
