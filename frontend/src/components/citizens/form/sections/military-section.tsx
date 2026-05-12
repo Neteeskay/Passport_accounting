@@ -1,8 +1,10 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
+import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
+import { formatDateInput } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type MilitarySectionProps = {
@@ -74,7 +76,7 @@ export function MilitarySection({ control, register, errors }: MilitarySectionPr
                 <Input placeholder="Военный комиссариат г. Донецка" {...register(`militaryRecords.${index}.authority`)} />
               </FormField>
               <FormField label="Дата" error={errors.militaryRecords?.[index]?.date?.message}>
-                <Input placeholder="11.02.2022" {...register(`militaryRecords.${index}.date`)} />
+                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="11.02.2022" registration={register(`militaryRecords.${index}.date`)} />
               </FormField>
             </div>
 

@@ -1,68 +1,30 @@
-import { useEffect, useState } from "react";
-import type { FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import { useWatch } from "react-hook-form";
+import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { FormSection } from "@/components/citizens/form/form-section";
+import { PhotoUploader } from "@/components/citizens/photo-uploader";
 import { Input } from "@/components/ui/input";
+import { digitsOnly, formatDateInput, formatDepartmentCode } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type BasicSectionProps = {
+  control: Control<CitizenFormValues>;
   register: UseFormRegister<CitizenFormValues>;
   errors: FieldErrors<CitizenFormValues>;
   setValue: UseFormSetValue<CitizenFormValues>;
 };
 
-export function BasicSection({ register, errors, setValue }: BasicSectionProps) {
-  const [photoPreview, setPhotoPreview] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (photoPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(photoPreview);
-      }
-    };
-  }, [photoPreview]);
+export function BasicSection({ control, register, errors, setValue }: BasicSectionProps) {
+  const photoUrl = useWatch({ control, name: "photoUrl" });
 
   return (
     <FormSection title="Основная информация">
       <div className="grid grid-cols-[112px_1fr] gap-6">
-        <div className="space-y-2">
-          <div className="flex h-[140px] w-[112px] items-center justify-center overflow-hidden rounded-[22px] border border-border bg-background">
-            {photoPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt="Фото гражданина" className="h-full w-full object-cover" src={photoPreview} />
-            ) : (
-              <div className="relative flex h-[94px] w-[72px] items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#fff3ee_0%,#f2f4f8_100%)]">
-                <div className="absolute top-[12px] h-7 w-7 rounded-full border-2 border-foreground/90" />
-                <div className="absolute bottom-[12px] h-9 w-12 rounded-t-[999px] border-2 border-foreground/70 border-b-0" />
-              </div>
-            )}
-          </div>
-          <label className="block text-center text-[13px] text-muted-foreground">
-            Фото 3x4
-            <input
-              className="sr-only"
-              type="file"
-              accept="image/png,image/jpeg"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-
-                if (!file) {
-                  return;
-                }
-
-                const url = URL.createObjectURL(file);
-                setPhotoPreview((previous) => {
-                  if (previous.startsWith("blob:")) {
-                    URL.revokeObjectURL(previous);
-                  }
-
-                  return url;
-                });
-                setValue("photoUrl", url, { shouldDirty: true });
-              }}
-            />
-          </label>
-        </div>
+        <PhotoUploader
+          value={photoUrl}
+          onChange={(value) => setValue("photoUrl", value, { shouldDirty: true, shouldValidate: true })}
+        />
 
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
@@ -79,7 +41,7 @@ export function BasicSection({ register, errors, setValue }: BasicSectionProps) 
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Дата рождения" error={errors.birthDate?.message}>
-              <Input placeholder="13.03.1990" {...register("birthDate")} />
+              <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="13.03.1990" registration={register("birthDate")} />
             </FormField>
             <FormField label="Пол" error={errors.gender?.message}>
               <select
@@ -101,19 +63,19 @@ export function BasicSection({ register, errors, setValue }: BasicSectionProps) 
       <FormSection title="Паспортные данные">
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Серия" error={errors.passportSeries?.message}>
-            <Input placeholder="2232" {...register("passportSeries")} />
+            <FormattedInput formatter={(value) => digitsOnly(value, 4)} inputMode="numeric" placeholder="2232" registration={register("passportSeries")} />
           </FormField>
           <FormField label="Номер" error={errors.passportNumber?.message}>
-            <Input placeholder="323232" {...register("passportNumber")} />
+            <FormattedInput formatter={(value) => digitsOnly(value, 6)} inputMode="numeric" placeholder="323232" registration={register("passportNumber")} />
           </FormField>
           <FormField label="Код подразделения" error={errors.departmentCode?.message}>
-            <Input placeholder="323-232" {...register("departmentCode")} />
+            <FormattedInput formatter={formatDepartmentCode} inputMode="numeric" placeholder="323-232" registration={register("departmentCode")} />
           </FormField>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Дата выдачи" error={errors.passportIssuedDate?.message}>
-            <Input placeholder="18.03.2015" {...register("passportIssuedDate")} />
+            <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="18.03.2015" registration={register("passportIssuedDate")} />
           </FormField>
           <FormField label="Кем выдан" error={errors.passportIssuedBy?.message}>
             <Input placeholder="ГУ МВД России по Ростовской области" {...register("passportIssuedBy")} />

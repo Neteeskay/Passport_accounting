@@ -36,6 +36,97 @@ export function buildCitizenFromForm(values: CitizenFormValues): Citizen {
   };
 }
 
+export function updateCitizenFromForm(citizen: Citizen, values: CitizenFormValues): Citizen {
+  return {
+    ...buildCitizenFromForm(values),
+    id: citizen.id,
+    createdAt: citizen.createdAt,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+export function mapCitizenToFormValues(citizen: Citizen): CitizenFormValues {
+  return {
+    lastName: citizen.lastName,
+    firstName: citizen.firstName,
+    middleName: citizen.middleName ?? "",
+    birthDate: toDisplayDate(citizen.birthDate),
+    birthPlace: citizen.birthPlace,
+    gender: citizen.gender,
+    passportSeries: citizen.passportSeries,
+    passportNumber: citizen.passportNumber,
+    passportIssuedBy: citizen.passportIssuedBy,
+    passportIssuedDate: toDisplayDate(citizen.passportIssuedDate),
+    departmentCode: citizen.departmentCode,
+    passportNote: citizen.passportNote ?? "",
+    phone: citizen.phone ?? "",
+    photoUrl: citizen.photoUrl ?? "",
+    registrationStamps:
+      citizen.registrationStamps?.map((stamp) => ({
+        ...stamp,
+        date: toDisplayDate(stamp.date),
+        apartment: stamp.apartment ?? ""
+      })) ?? [],
+    children:
+      citizen.children?.map((child) => ({
+        ...child,
+        birthDate: toDisplayDate(child.birthDate),
+        middleName: child.middleName ?? "",
+        personalMark: child.personalMark ?? ""
+      })) ?? [],
+    marriageRecords:
+      citizen.marriageRecords?.map((record) => ({
+        ...record,
+        date: toDisplayDate(record.date),
+        spouseBirthDate: toDisplayDate(record.spouseBirthDate),
+        spouseMiddleName: record.spouseMiddleName ?? ""
+      })) ?? [],
+    militaryRecords:
+      citizen.militaryRecords?.map((record) => ({
+        ...record,
+        date: toDisplayDate(record.date)
+      })) ?? [],
+    foreignPassports:
+      citizen.foreignPassports?.map((record) => ({
+        ...record,
+        issueDate: toDisplayDate(record.issueDate),
+        note: record.note ?? ""
+      })) ?? [],
+    nameChanges:
+      citizen.nameChanges?.map((record) => ({
+        ...record,
+        date: toDisplayDate(record.date),
+        previousMiddleName: record.previousMiddleName ?? "",
+        newMiddleName: record.newMiddleName ?? "",
+        note: record.note ?? ""
+      })) ?? [],
+    historyRecords:
+      citizen.historyRecords?.map((record) => ({
+        ...record,
+        issueDate: toDisplayDate(record.issueDate),
+        note: record.note ?? ""
+      })) ?? []
+  };
+}
+
+function toDisplayDate(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+    return value;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("ru-RU").format(date);
+}
+
 function buildPreviewStamps(values: CitizenFormValues): Stamp[] {
   const childStamp =
     values.children.length > 0
