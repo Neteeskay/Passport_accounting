@@ -14,10 +14,11 @@ import type { Citizen } from "@/types/citizen";
 type CitizenCardProps = {
   citizen: Citizen;
   onView?: (citizen: Citizen) => void;
+  onEdit?: (citizen: Citizen) => void;
   onDelete?: (citizen: Citizen) => void;
 };
 
-export function CitizenCard({ citizen, onView, onDelete }: CitizenCardProps) {
+export function CitizenCard({ citizen, onView, onEdit, onDelete }: CitizenCardProps) {
   const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
   const genderLabel = citizen.gender === "male" ? "М" : "Ж";
   const stampLabels = citizen.stamps.map((stamp) => stamp.comment).filter(Boolean).slice(0, 4) as string[];
@@ -26,10 +27,15 @@ export function CitizenCard({ citizen, onView, onDelete }: CitizenCardProps) {
     <article className="w-full max-w-[612px] rounded-[14px] border border-border bg-card p-5 shadow-soft">
       <div className="flex gap-4">
         <div className="flex h-[96px] w-[84px] shrink-0 items-center justify-center rounded-[18px] border border-border bg-background">
-          <div className="relative flex h-[68px] w-[56px] items-center justify-center rounded-[14px] bg-[linear-gradient(180deg,#fff3ee_0%,#f2f4f8_100%)]">
-            <div className="absolute top-[9px] h-6 w-6 rounded-full border-2 border-foreground/90" />
-            <div className="absolute bottom-[10px] h-7 w-10 rounded-t-[999px] border-2 border-foreground/70 border-b-0" />
-          </div>
+          {citizen.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt="Фото гражданина" className="h-full w-full rounded-[18px] object-cover" src={citizen.photoUrl} />
+          ) : (
+            <div className="relative flex h-[68px] w-[56px] items-center justify-center rounded-[14px] bg-[linear-gradient(180deg,#fff3ee_0%,#f2f4f8_100%)]">
+              <div className="absolute top-[9px] h-6 w-6 rounded-full border-2 border-foreground/90" />
+              <div className="absolute bottom-[10px] h-7 w-10 rounded-t-[999px] border-2 border-foreground/70 border-b-0" />
+            </div>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -81,7 +87,11 @@ export function CitizenCard({ citizen, onView, onDelete }: CitizenCardProps) {
             <Eye className="h-4 w-4" />
             Просмотр
           </button>
-          <button className="inline-flex items-center gap-2 text-foreground transition hover:text-primary" type="button">
+          <button
+            className="inline-flex items-center gap-2 text-foreground transition hover:text-primary"
+            type="button"
+            onClick={() => onEdit?.(citizen)}
+          >
             <Pencil className="h-4 w-4" />
             Изменить
           </button>

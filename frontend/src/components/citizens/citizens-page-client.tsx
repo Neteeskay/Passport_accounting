@@ -11,7 +11,7 @@ import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { mockCitizens } from "@/lib/mock-data/citizens";
-import { buildCitizenFromForm } from "@/lib/utils/citizen-form";
+import { buildCitizenFromForm, updateCitizenFromForm } from "@/lib/utils/citizen-form";
 import { useAuthStore } from "@/store/auth-store";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
@@ -24,6 +24,7 @@ export function CitizensPageClient() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
+  const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
 
   const totalCount = citizens.length;
   const maleCount = citizens.filter((citizen) => citizen.gender === "male").length;
@@ -42,6 +43,19 @@ export function CitizensPageClient() {
     if (window.confirm(`Удалить запись гражданина ${fullName}?`)) {
       setCitizens((current) => current.filter((item) => item.id !== citizen.id));
     }
+  };
+
+  const handleUpdateCitizen = (values: CitizenFormValues) => {
+    if (!editingCitizen) {
+      return;
+    }
+
+    const updatedCitizen = updateCitizenFromForm(editingCitizen, values);
+
+    setCitizens((current) =>
+      current.map((citizen) => (citizen.id === editingCitizen.id ? updatedCitizen : citizen))
+    );
+    setEditingCitizen(null);
   };
 
   const isAdmin = currentUser?.role === "admin" || !currentUser;
@@ -83,6 +97,7 @@ export function CitizensPageClient() {
                   citizen={citizen}
                   key={citizen.id}
                   onDelete={isAdmin ? handleDeleteCitizen : undefined}
+                  onEdit={setEditingCitizen}
                   onView={setSelectedCitizen}
                 />
               ))}
@@ -95,6 +110,14 @@ export function CitizensPageClient() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateCitizen}
+      />
+      <CitizenFormModal
+        citizen={editingCitizen}
+        mode="edit"
+        open={Boolean(editingCitizen)}
+        onClose={() => setEditingCitizen(null)}
+        onCreate={handleCreateCitizen}
+        onUpdate={handleUpdateCitizen}
       />
       <CitizenDetailModal
         citizen={selectedCitizen}

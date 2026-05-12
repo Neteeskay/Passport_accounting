@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BasicSection } from "@/components/citizens/form/sections/basic-section";
 import { ChildrenSection } from "@/components/citizens/form/sections/children-section";
@@ -20,11 +20,18 @@ import {
 } from "@/lib/validation/citizen";
 
 type CitizenFormProps = {
+  defaultValues?: CitizenFormValues;
   onCancel: () => void;
   onSubmitSuccess: (values: CitizenFormValues) => void;
+  submitLabel?: string;
 };
 
-export function CitizenForm({ onCancel, onSubmitSuccess }: CitizenFormProps) {
+export function CitizenForm({
+  defaultValues = citizenFormDefaultValues,
+  onCancel,
+  onSubmitSuccess,
+  submitLabel = "Добавить"
+}: CitizenFormProps) {
   const [activeTab, setActiveTab] = useState<CitizenFormTab>("basic");
   const {
     register,
@@ -35,13 +42,18 @@ export function CitizenForm({ onCancel, onSubmitSuccess }: CitizenFormProps) {
     reset
   } = useForm<CitizenFormValues>({
     resolver: zodResolver(citizenFormSchema),
-    defaultValues: citizenFormDefaultValues
+    defaultValues
   });
+
+  useEffect(() => {
+    reset(defaultValues);
+    setActiveTab("basic");
+  }, [defaultValues, reset]);
 
   const onSubmit = (values: CitizenFormValues) => {
     startTransition(() => {
       onSubmitSuccess(values);
-      reset(citizenFormDefaultValues);
+      reset(defaultValues);
       setActiveTab("basic");
     });
   };
@@ -52,7 +64,7 @@ export function CitizenForm({ onCancel, onSubmitSuccess }: CitizenFormProps) {
 
       <div className="mt-5 max-h-[68vh] overflow-y-auto pr-2">
         {activeTab === "basic" ? (
-          <BasicSection errors={errors} register={register} setValue={setValue} />
+          <BasicSection control={control} errors={errors} register={register} setValue={setValue} />
         ) : null}
         {activeTab === "registration" ? (
           <RegistrationSection control={control} errors={errors} register={register} />
@@ -82,7 +94,7 @@ export function CitizenForm({ onCancel, onSubmitSuccess }: CitizenFormProps) {
           Отмена
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          Добавить
+          {submitLabel}
         </Button>
       </div>
     </form>
