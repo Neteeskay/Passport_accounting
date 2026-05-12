@@ -16,6 +16,7 @@ from app.services.auth import (
     authenticate_user,
     create_user,
     delete_user,
+    list_users,
     logout_user,
     update_user,
     UserConflictError,
@@ -49,6 +50,14 @@ def create_user_by_admin(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
     return AuthUserResponse(**user)
+
+
+@router.get("/users", response_model=list[AuthUserResponse])
+def list_users_by_admin(
+    _current_admin: dict = Depends(require_roles("admin")),
+) -> list[AuthUserResponse]:
+    users = list_users()
+    return [AuthUserResponse(**user) for user in users]
 
 
 @router.put("/users/{user_id}", response_model=AuthUserResponse)

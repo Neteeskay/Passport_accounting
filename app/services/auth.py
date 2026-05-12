@@ -242,6 +242,27 @@ def create_user(payload: dict) -> dict:
         return _serialize_user(user_row)
 
 
+def list_users() -> list[dict]:
+    from app.db.session import get_connection
+
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, username, full_name, role, is_active, created_at, updated_at
+            FROM users
+            ORDER BY
+                CASE role
+                    WHEN 'admin' THEN 0
+                    WHEN 'operator' THEN 1
+                    ELSE 2
+                END,
+                username ASC
+            """
+        ).fetchall()
+
+        return [_serialize_user(row) for row in rows]
+
+
 def update_user(user_id: int, payload: dict) -> dict:
     from app.db.session import get_connection
 
