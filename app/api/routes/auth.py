@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.dependencies.auth import get_bearer_token, get_current_user, require_roles
 from app.schemas.auth import (
@@ -7,6 +7,7 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     LogoutResponse,
+    UpdateUserRequest,
 )
 from app.services.auth import (
     AuthenticationError,
@@ -14,8 +15,12 @@ from app.services.auth import (
     RevokedTokenError,
     authenticate_user,
     create_user,
+    delete_user,
     logout_user,
+    update_user,
     UserConflictError,
+    UserNotFoundError,
+    UserOperationError,
 )
 
 router = APIRouter(tags=["auth"])
@@ -44,6 +49,37 @@ def create_user_by_admin(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
     return AuthUserResponse(**user)
+
+
+@router.put("/users/{user_id}", response_model=AuthUserResponse)
+def update_user_by_admin(
+    user_id: int,
+    payload: UpdateUserRequest,
+    _current_admin: dict = Depends(require_roles("admin")),
+) -> AuthUserResponse:
+    try:
+        user = update_user(user_id, payload.model_dump())
+    except UserConflictError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except UserNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return AuthUserResponse(**user)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_by_admin(
+    user_id: int,
+    current_admin: dict = Depends(require_roles("admin")),
+) -> Response:
+    try:
+        delete_user(user_id, current_admin_id=int(current_admin["id"]))
+    except UserNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except UserOperationError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/me", response_model=AuthUserResponse)

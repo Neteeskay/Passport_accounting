@@ -33,6 +33,14 @@ class UserConflictError(Exception):
     """Raised when a user with the same username already exists."""
 
 
+class UserNotFoundError(Exception):
+    """Raised when a target user does not exist."""
+
+
+class UserOperationError(Exception):
+    """Raised when a user operation is not allowed."""
+
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
@@ -177,6 +185,18 @@ def find_user_by_username(connection: sqlite3.Connection, username: str) -> sqli
     ).fetchone()
 
 
+def find_user_by_id(connection: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT id, username, password_hash, full_name, role, is_active, created_at, updated_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        """,
+        (user_id,),
+    ).fetchone()
+
+
 def create_user(payload: dict) -> dict:
     from app.db.session import get_connection
 
@@ -220,6 +240,90 @@ def create_user(payload: dict) -> dict:
             raise AuthenticationError("Newly created user could not be loaded.")
 
         return _serialize_user(user_row)
+
+
+def update_user(user_id: int, payload: dict) -> dict:
+    from app.db.session import get_connection
+
+    username = payload["username"].strip()
+    full_name = payload["full_name"].strip()
+    role = str(payload["role"]).strip()
+    is_active = bool(payload.get("is_active", True))
+    password = payload.get("password")
+
+    with get_connection() as connection:
+        existing_user = find_user_by_id(connection, user_id)
+        if existing_user is None:
+            raise UserNotFoundError(f"User with id={user_id} was not found.")
+
+        conflicting_user = find_user_by_username(connection, username)
+        if conflicting_user is not None and int(conflicting_user["id"]) != user_id:
+            raise UserConflictError(f"User with username '{username}' already exists.")
+
+        if password:
+            connection.execute(
+                """
+                UPDATE users
+                SET
+                    username = ?,
+                    password_hash = ?,
+                    full_name = ?,
+                    role = ?,
+                    is_active = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    username,
+                    hash_password(password),
+                    full_name,
+                    role,
+                    int(is_active),
+                    user_id,
+                ),
+            )
+        else:
+            connection.execute(
+                """
+                UPDATE users
+                SET
+                    username = ?,
+                    full_name = ?,
+                    role = ?,
+                    is_active = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    username,
+                    full_name,
+                    role,
+                    int(is_active),
+                    user_id,
+                ),
+            )
+
+        connection.commit()
+        user_row = find_user_by_id(connection, user_id)
+        if user_row is None:
+            raise UserNotFoundError(f"User with id={user_id} was not found after update.")
+
+        return _serialize_user(user_row)
+
+
+def delete_user(user_id: int, current_admin_id: int | None = None) -> None:
+    from app.db.session import get_connection
+
+    with get_connection() as connection:
+        existing_user = find_user_by_id(connection, user_id)
+        if existing_user is None:
+            raise UserNotFoundError(f"User with id={user_id} was not found.")
+
+        if current_admin_id is not None and int(existing_user["id"]) == current_admin_id:
+            raise UserOperationError("Admin cannot delete the current authenticated account.")
+
+        connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        connection.commit()
 
 
 def authenticate_user(username: str, password: str) -> dict:

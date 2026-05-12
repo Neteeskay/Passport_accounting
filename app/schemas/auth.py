@@ -17,6 +17,14 @@ class CreateUserRequest(BaseModel):
     is_active: bool = True
 
 
+class UpdateUserRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=100)
+    password: str | None = Field(default=None, min_length=6, max_length=255)
+    full_name: str = Field(min_length=1, max_length=255)
+    role: Literal["admin", "operator"]
+    is_active: bool = True
+
+
 class AuthUserResponse(BaseModel):
     id: int
     username: str
