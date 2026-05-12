@@ -1,10 +1,12 @@
 "use client";
 
 import { Download, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { isValidBirthDateFilter } from "@/lib/utils/filter-validation";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
+import { getCitizenRegistrationAddress } from "@/lib/utils/citizen-display";
+import { printElement } from "@/lib/utils/print-element";
 import type { Citizen } from "@/types/citizen";
 import { RegistryFilters, type RegistryFilters as RegistryFiltersState } from "./registry-filters";
 import { RegistryTable } from "./registry-table";
@@ -19,17 +21,30 @@ const emptyFilters: RegistryFiltersState = {
 
 type CitizensRegistryModalProps = {
   citizens: Citizen[];
+  initialFilters: RegistryFiltersState;
   open: boolean;
   onClose: () => void;
 };
 
-export function CitizensRegistryModal({ citizens, open, onClose }: CitizensRegistryModalProps) {
-  const [filters, setFilters] = useState<RegistryFiltersState>(emptyFilters);
+export function CitizensRegistryModal({
+  citizens,
+  initialFilters,
+  open,
+  onClose
+}: CitizensRegistryModalProps) {
+  const printRef = useRef<HTMLDivElement>(null);
+  const [filters, setFilters] = useState<RegistryFiltersState>(initialFilters ?? emptyFilters);
 
   const filteredCitizens = useMemo(
     () => citizens.filter((citizen) => matchesFilters(citizen, filters)),
     [citizens, filters]
   );
+
+  useEffect(() => {
+    if (open) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters, open]);
 
   if (!open) {
     return null;
@@ -55,7 +70,7 @@ export function CitizensRegistryModal({ citizens, open, onClose }: CitizensRegis
           <div className="mt-5">
             <RegistryFilters filters={filters} onChange={setFilters} />
           </div>
-          <div className="mt-5">
+          <div ref={printRef} className="mt-5">
             <RegistryTable citizens={filteredCitizens} />
           </div>
         </div>
@@ -65,7 +80,16 @@ export function CitizensRegistryModal({ citizens, open, onClose }: CitizensRegis
             <X className="h-4 w-4" />
             Закрыть
           </Button>
-          <Button className="h-11 rounded-[18px] px-5" type="button" onClick={() => window.print()}>
+          <Button
+            className="h-11 rounded-[18px] px-5"
+            type="button"
+            onClick={() =>
+              printElement(printRef.current, {
+                orientation: "landscape",
+                title: "Реестр граждан"
+              })
+            }
+          >
             <Download className="h-4 w-4" />
             Скачать PDF
           </Button>
@@ -81,7 +105,7 @@ function matchesFilters(citizen: Citizen, filters: RegistryFiltersState) {
   const address = normalize(filters.address);
   const fullName = normalize([citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" "));
   const citizenPassport = normalize(`${citizen.passportSeries} ${citizen.passportNumber}`);
-  const citizenAddress = normalize(citizen.registrationAddress);
+  const citizenAddress = normalize(getCitizenRegistrationAddress(citizen));
 
   if (query && !fullName.includes(query)) {
     return false;

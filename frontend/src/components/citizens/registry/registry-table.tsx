@@ -1,4 +1,5 @@
 import type { Citizen } from "@/types/citizen";
+import { getCitizenRegistrationAddress } from "@/lib/utils/citizen-display";
 
 type RegistryTableProps = {
   citizens: Citizen[];
@@ -32,7 +33,7 @@ export function RegistryTable({ citizens }: RegistryTableProps) {
                 <td className="px-4 py-4 align-top">
                   {citizen.passportSeries} {citizen.passportNumber}
                 </td>
-                <td className="px-4 py-4 align-top leading-5">{citizen.registrationAddress}</td>
+                <td className="px-4 py-4 align-top leading-5">{getCitizenRegistrationAddress(citizen) || "—"}</td>
                 <td className="px-4 py-4 align-top">{formatDate(citizen.passportIssuedDate)}</td>
               </tr>
             ))

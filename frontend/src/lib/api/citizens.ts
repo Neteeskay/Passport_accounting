@@ -25,6 +25,18 @@ export type CitizensSearchParams = {
   offset?: number;
 };
 
+type CitizensStatsResponse = {
+  total?: number;
+  totalCount?: number;
+  total_count?: number;
+  male?: number;
+  maleCount?: number;
+  male_count?: number;
+  female?: number;
+  femaleCount?: number;
+  female_count?: number;
+};
+
 export async function getCitizens(token?: string | null, params: CitizensSearchParams = {}) {
   const data = await apiRequest<CitizensListResponse>("/api/v1/citizens", {
     method: "GET",
@@ -55,6 +67,37 @@ export async function getCitizen(citizenId: string, token?: string | null) {
   });
 
   return apiCitizenToCitizen(data);
+}
+
+export async function getCitizensStats(token?: string | null, params: CitizensSearchParams = {}) {
+  const data = await apiRequest<CitizensStatsResponse>("/api/v1/citizens/stats", {
+    method: "GET",
+    token,
+    params: toCitizensApiParams(params)
+  });
+
+  return {
+    totalCount: data.totalCount ?? data.total_count ?? data.total ?? 0,
+    maleCount: data.maleCount ?? data.male_count ?? data.male ?? 0,
+    femaleCount: data.femaleCount ?? data.female_count ?? data.female ?? 0
+  };
+}
+
+export async function exportRegistryPdf(token?: string | null, params: CitizensSearchParams = {}) {
+  return apiRequest<Blob>("/api/v1/citizens/registry/pdf", {
+    method: "GET",
+    token,
+    params: toCitizensApiParams(params),
+    responseType: "blob"
+  });
+}
+
+export async function exportCitizenPdf(citizenId: string, token?: string | null) {
+  return apiRequest<Blob>(`/api/v1/citizens/${citizenId}/pdf`, {
+    method: "GET",
+    token,
+    responseType: "blob"
+  });
 }
 
 export async function createCitizen(values: CitizenFormValues, token?: string | null) {
@@ -101,4 +144,16 @@ function unwrapCitizens(data: CitizensListResponse) {
   }
 
   return data.items ?? data.results ?? data.data ?? [];
+}
+
+function toCitizensApiParams(params: CitizensSearchParams) {
+  return {
+    query: params.query,
+    gender: params.gender && params.gender !== "all" ? params.gender : undefined,
+    birthDateFrom: params.birthDateFrom,
+    passport: params.passport,
+    address: params.address,
+    limit: params.limit,
+    offset: params.offset
+  };
 }

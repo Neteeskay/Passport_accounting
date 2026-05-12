@@ -22,7 +22,9 @@ export function CitizensPageClient() {
     createCitizenCard,
     deleteCitizenCard,
     filters,
+    hasLoadedCitizens,
     isLoadingCitizens,
+    isRefreshingCitizens,
     loadCitizenDetails,
     setFilters,
     stats,
@@ -72,9 +74,9 @@ export function CitizensPageClient() {
       >
         <main>
           <section className="grid grid-cols-4 gap-3">
-            <StatCard icon={UsersRound} label="Всего записей" value={stats.totalCount} />
-            <StatCard icon={UsersRound} label="Мужчины" value={stats.maleCount} accent />
-            <StatCard icon={UsersRound} label="Женщины" value={stats.femaleCount} accent />
+            <StatCard icon={UsersRound} label="Всего записей" value={stats.totalCount} loading={!hasLoadedCitizens && isLoadingCitizens} />
+            <StatCard icon={UsersRound} label="Мужчины" value={stats.maleCount} accent loading={!hasLoadedCitizens && isLoadingCitizens} />
+            <StatCard icon={UsersRound} label="Женщины" value={stats.femaleCount} accent loading={!hasLoadedCitizens && isLoadingCitizens} />
             <button
               className="flex h-[92px] flex-col items-center justify-center rounded-[16px] border border-border bg-card text-[13px] shadow-soft transition hover:bg-muted"
               type="button"
@@ -93,23 +95,37 @@ export function CitizensPageClient() {
             </div>
           ) : null}
 
-          {isLoadingCitizens ? (
-            <div className="mt-4 rounded-[14px] border border-border bg-card px-4 py-3 text-[14px] text-muted-foreground">
-              Загружаем граждан из backend...
+          <section className="relative mt-6 min-h-[180px]">
+            <div
+              className={[
+                "pointer-events-none absolute right-0 top-0 z-10 rounded-full border border-border bg-card/95 px-3 py-1.5 text-[12px] text-muted-foreground shadow-soft transition-opacity duration-200",
+                isRefreshingCitizens ? "opacity-100" : "opacity-0"
+              ].join(" ")}
+            >
+              Обновляем...
             </div>
-          ) : null}
 
-          <section className="mt-6">
-            <div className="flex flex-col gap-4">
-              {citizens.map((citizen) => (
-                <CitizenCard
-                  citizen={citizen}
-                  key={citizen.id}
-                  onDelete={isAdmin ? deleteCitizenCard : undefined}
-                  onEdit={(citizen) => void handleEditCitizen(citizen)}
-                  onView={(citizen) => void handleViewCitizen(citizen)}
-                />
-              ))}
+            <div
+              className={[
+                "flex min-h-[180px] flex-col gap-4 transition-opacity duration-200",
+                isRefreshingCitizens ? "opacity-70" : "opacity-100"
+              ].join(" ")}
+            >
+              {citizens.length > 0 ? (
+                citizens.map((citizen) => (
+                  <CitizenCard
+                    citizen={citizen}
+                    key={citizen.id}
+                    onDelete={isAdmin ? deleteCitizenCard : undefined}
+                    onEdit={(citizen) => void handleEditCitizen(citizen)}
+                    onView={(citizen) => void handleViewCitizen(citizen)}
+                  />
+                ))
+              ) : (
+                <div className="flex min-h-[180px] items-center justify-center rounded-[14px] border border-dashed border-border bg-card px-4 text-[14px] text-muted-foreground">
+                  {isLoadingCitizens ? "Загружаем граждан..." : "Граждане не найдены"}
+                </div>
+              )}
             </div>
           </section>
         </main>
@@ -137,6 +153,7 @@ export function CitizensPageClient() {
       />
       <CitizensRegistryModal
         citizens={citizens}
+        initialFilters={filters}
         open={isRegistryOpen}
         onClose={() => setIsRegistryOpen(false)}
       />

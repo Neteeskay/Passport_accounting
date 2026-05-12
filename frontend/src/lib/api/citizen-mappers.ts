@@ -29,6 +29,11 @@ export type ApiCitizen = {
   passportNote?: string | null;
   registrationAddress?: string;
   registration_address?: string;
+  address?: string;
+  registeredAddress?: string;
+  registered_address?: string;
+  residenceAddress?: string;
+  residence_address?: string;
   phone?: string | null;
   photoUrl?: string | null;
   photo_url?: string | null;
@@ -111,7 +116,15 @@ export function apiCitizenToCitizen(apiCitizen: ApiCitizen): Citizen {
     passportIssuedDate: apiCitizen.passportIssuedDate ?? apiCitizen.passport_issued_date ?? "",
     departmentCode: apiCitizen.departmentCode ?? apiCitizen.department_code ?? "",
     passportNote: apiCitizen.passportNote ?? apiCitizen.passport_note ?? apiCitizen.notes ?? "",
-    registrationAddress: apiCitizen.registrationAddress ?? apiCitizen.registration_address ?? "",
+    registrationAddress:
+      apiCitizen.registrationAddress ??
+      apiCitizen.registration_address ??
+      apiCitizen.registeredAddress ??
+      apiCitizen.registered_address ??
+      apiCitizen.residenceAddress ??
+      apiCitizen.residence_address ??
+      apiCitizen.address ??
+      "",
     phone: apiCitizen.phone ?? "",
     photoUrl: apiCitizen.photoUrl ?? apiCitizen.photo_url ?? apiCitizen.photo_path ?? "",
     stamps: apiStampsToStamps(apiCitizen.stamps ?? []),

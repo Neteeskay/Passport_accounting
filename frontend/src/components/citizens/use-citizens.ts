@@ -1,15 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CitizensListFilters } from "@/components/citizens/citizens-toolbar";
 import {
   createCitizen,
   deleteCitizen,
+  exportCitizenPdf,
+  exportRegistryPdf,
   getCitizen,
   getCitizens,
+  getCitizensStats,
   updateCitizen,
   uploadCitizenPhoto
 } from "@/lib/api/citizens";
+import { citizenFiltersToApiParams } from "@/lib/api/citizen-query";
 import { ApiError } from "@/lib/api/client";
 import { mergeCitizenStamps } from "@/lib/api/stamp-mappers";
 import { citizenFormToStampPayloads } from "@/lib/api/stamp-form-mappers";
@@ -19,7 +23,7 @@ import {
   getCitizenStamps,
   updateCitizenStamp
 } from "@/lib/api/stamps";
-import { toApiDateFilter } from "@/lib/utils/filter-validation";
+import { downloadBlob } from "@/lib/utils/download";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
@@ -32,45 +36,70 @@ const defaultFilters: CitizensListFilters = {
 };
 
 export function useCitizens(token?: string | null) {
+  const loadRequestId = useRef(0);
   const [citizens, setCitizens] = useState<Citizen[]>([]);
   const [filters, setFilters] = useState<CitizensListFilters>(defaultFilters);
-  const [totalCitizens, setTotalCitizens] = useState(0);
+  const [stats, setStats] = useState({
+    femaleCount: 0,
+    maleCount: 0,
+    totalCount: 0
+  });
   const [isLoadingCitizens, setIsLoadingCitizens] = useState(false);
+  const [hasLoadedCitizens, setHasLoadedCitizens] = useState(false);
   const [actionError, setActionError] = useState("");
-
-  const stats = useMemo(
-    () => ({
-      femaleCount: citizens.filter((citizen) => citizen.gender === "female").length,
-      maleCount: citizens.filter((citizen) => citizen.gender === "male").length,
-      totalCount: totalCitizens || citizens.length
-    }),
-    [citizens, totalCitizens]
-  );
 
   const loadCitizens = useCallback(async (nextFilters: CitizensListFilters) => {
     if (!token) {
       return;
     }
 
+    const requestId = loadRequestId.current + 1;
+    loadRequestId.current = requestId;
+
     try {
       setIsLoadingCitizens(true);
       setActionError("");
-      const response = await getCitizens(token, {
-        query: nextFilters.query.trim() || undefined,
-        gender: nextFilters.gender,
-        birthDateFrom: toApiDateFilter(nextFilters.birthDate),
-        passport: nextFilters.passport.replace(/\D/g, "") || undefined,
-        address: nextFilters.address.trim() || undefined,
+      const apiParams = {
+        ...citizenFiltersToApiParams(nextFilters),
         limit: 50,
         offset: 0
-      });
+      };
+      const [citizensResult, statsResult] = await Promise.allSettled([
+        getCitizens(token, apiParams),
+        getCitizensStats(token, apiParams)
+      ]);
+
+      if (citizensResult.status === "rejected") {
+        throw citizensResult.reason;
+      }
+
+      const response = citizensResult.value;
+
+      if (requestId !== loadRequestId.current) {
+        return;
+      }
 
       setCitizens(response.items);
-      setTotalCitizens(response.total);
+      if (statsResult.status === "fulfilled") {
+        setStats(statsResult.value);
+      } else {
+        setStats({
+          femaleCount: response.items.filter((citizen) => citizen.gender === "female").length,
+          maleCount: response.items.filter((citizen) => citizen.gender === "male").length,
+          totalCount: response.total
+        });
+      }
     } catch (error) {
+      if (requestId !== loadRequestId.current) {
+        return;
+      }
+
       setActionError(getReadableApiError(error, "Не удалось загрузить граждан с backend"));
     } finally {
-      setIsLoadingCitizens(false);
+      if (requestId === loadRequestId.current) {
+        setIsLoadingCitizens(false);
+        setHasLoadedCitizens(true);
+      }
     }
   }, [token]);
 
@@ -89,7 +118,11 @@ export function useCitizens(token?: string | null) {
       const nextCitizen = await syncCitizenStamps(createdCitizen, values, token);
 
       setCitizens((current) => [nextCitizen, ...current]);
-      setTotalCitizens((current) => current + 1);
+      setStats((current) => ({
+        femaleCount: current.femaleCount + (nextCitizen.gender === "female" ? 1 : 0),
+        maleCount: current.maleCount + (nextCitizen.gender === "male" ? 1 : 0),
+        totalCount: current.totalCount + 1
+      }));
     } catch (error) {
       setActionError(getReadableApiError(error, "Не удалось создать карточку гражданина"));
       throw error;
@@ -122,7 +155,11 @@ export function useCitizens(token?: string | null) {
       setActionError("");
       await deleteCitizen(citizen.id, token);
       setCitizens((current) => current.filter((item) => item.id !== citizen.id));
-      setTotalCitizens((current) => Math.max(0, current - 1));
+      setStats((current) => ({
+        femaleCount: Math.max(0, current.femaleCount - (citizen.gender === "female" ? 1 : 0)),
+        maleCount: Math.max(0, current.maleCount - (citizen.gender === "male" ? 1 : 0)),
+        totalCount: Math.max(0, current.totalCount - 1)
+      }));
     } catch (error) {
       setActionError(getReadableApiError(error, "Не удалось удалить карточку гражданина"));
     }
@@ -148,13 +185,41 @@ export function useCitizens(token?: string | null) {
     return result.photoUrl;
   }, [token]);
 
+  const downloadRegistryPdf = useCallback(async (nextFilters: CitizensListFilters = filters) => {
+    try {
+      setActionError("");
+      const blob = await exportRegistryPdf(token, citizenFiltersToApiParams(nextFilters));
+
+      downloadBlob(blob, "citizens-registry.pdf");
+    } catch (error) {
+      setActionError(getReadableApiError(error, "Не удалось скачать PDF реестра"));
+      throw error;
+    }
+  }, [filters, token]);
+
+  const downloadCitizenPdf = useCallback(async (citizenId: string) => {
+    try {
+      setActionError("");
+      const blob = await exportCitizenPdf(citizenId, token);
+
+      downloadBlob(blob, `citizen-${citizenId}.pdf`);
+    } catch (error) {
+      setActionError(getReadableApiError(error, "Не удалось скачать PDF гражданина"));
+      throw error;
+    }
+  }, [token]);
+
   return {
     actionError,
     citizens,
     createCitizenCard,
     deleteCitizenCard,
+    downloadCitizenPdf,
+    downloadRegistryPdf,
     filters,
+    hasLoadedCitizens,
     isLoadingCitizens,
+    isRefreshingCitizens: isLoadingCitizens && hasLoadedCitizens,
     loadCitizenDetails,
     setFilters,
     stats,

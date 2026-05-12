@@ -1,9 +1,11 @@
 "use client";
 
 import { Download, X } from "lucide-react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { CitizenPassportPreview } from "@/components/citizens/detail/citizen-passport-preview";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
+import { printElement } from "@/lib/utils/print-element";
 import type { Citizen } from "@/types/citizen";
 
 type CitizenDetailModalProps = {
@@ -13,12 +15,17 @@ type CitizenDetailModalProps = {
 };
 
 export function CitizenDetailModal({ citizen, open, onClose }: CitizenDetailModalProps) {
+  const printRef = useRef<HTMLDivElement>(null);
+
   if (!open || !citizen) {
     return null;
   }
 
   const handleDownload = () => {
-    window.print();
+    printElement(printRef.current, {
+      orientation: "portrait",
+      title: "Паспорт гражданина"
+    });
   };
 
   return (
@@ -37,7 +44,7 @@ export function CitizenDetailModal({ citizen, open, onClose }: CitizenDetailModa
         </div>
 
         <div className="mx-7 min-h-0 flex-1 overflow-hidden rounded-[18px] border border-border bg-background">
-          <div className="h-full overflow-y-auto px-8 py-6">
+          <div ref={printRef} className="h-full overflow-y-auto px-8 py-6">
             <CitizenPassportPreview citizen={citizen} />
           </div>
         </div>
