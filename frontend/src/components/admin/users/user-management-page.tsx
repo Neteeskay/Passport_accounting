@@ -2,21 +2,38 @@
 
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthSession } from "@/components/auth/use-auth-session";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api/client";
+import { checkAdminSession } from "@/lib/api/system";
+import { createAuthUser, type CreateUserPayload } from "@/lib/api/users";
 import { mockUsers } from "@/lib/mock-data/users";
 import type { User, UserRole } from "@/types/user";
 import { UserCreateForm } from "./user-create-form";
 import { UserRow } from "./user-row";
 
 export function UserManagementPage() {
-  const { user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
+  const { token, user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [isCreating, setIsCreating] = useState(false);
+  const [accessError, setAccessError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const isAdmin = currentUser?.role === "admin";
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    checkAdminSession(token).catch((error) => {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        setAccessError("Раздел доступен только администратору");
+      }
+    });
+  }, [token]);
 
   const handleRoleChange = (userId: string, role: UserRole) => {
     setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role } : user)));
@@ -30,12 +47,20 @@ export function UserManagementPage() {
     }
   };
 
-  const handleCreate = (user: User) => {
-    setUsers((current) => [user, ...current]);
-    setIsCreating(false);
+  const handleCreate = async (payload: CreateUserPayload) => {
+    try {
+      setActionError("");
+      const user = await createAuthUser(payload, token);
+
+      setUsers((current) => [user, ...current]);
+      setIsCreating(false);
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "Не удалось создать пользователя");
+      throw error;
+    }
   };
 
-  if (!isAdmin) {
+  if (!isAdmin || accessError) {
     return (
       <main className="min-h-svh bg-background px-8 py-7 text-foreground">
         <div className="flex items-start gap-4">
@@ -44,7 +69,9 @@ export function UserManagementPage() {
           </Link>
           <div>
             <h1 className="text-[20px] font-bold leading-6">Управление пользователями</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">Раздел доступен только администратору</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {accessError || "Раздел доступен только администратору"}
+            </p>
           </div>
         </div>
       </main>
@@ -69,6 +96,11 @@ export function UserManagementPage() {
 
         <section className="mt-10">
           <h2 className="text-[15px] font-semibold text-foreground">Пользователи</h2>
+          {actionError ? (
+            <div className="mt-4 rounded-[14px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-[14px] text-destructive">
+              {actionError}
+            </div>
+          ) : null}
 
           <div className="mt-4 space-y-3">
             {users.map((user) => (

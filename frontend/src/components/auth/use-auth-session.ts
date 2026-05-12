@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/client";
 import { getCurrentUser, logoutSession } from "@/lib/api/auth";
+import { checkAuthenticatedSession } from "@/lib/api/system";
 import { useAuthStore } from "@/store/auth-store";
 
 type UseAuthSessionOptions = {
@@ -27,6 +28,7 @@ export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessio
     }
 
     try {
+      await checkAuthenticatedSession(token);
       const currentUser = await getCurrentUser(token);
       setUser(currentUser);
     } catch (error) {

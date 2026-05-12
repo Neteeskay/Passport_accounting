@@ -7,7 +7,7 @@ import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
 import { CitizenFormModal } from "@/components/citizens/form/citizen-form-modal";
 import { CitizensRegistryModal } from "@/components/citizens/registry/citizens-registry-modal";
-import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
+import { CitizensToolbar, type CitizensListFilters } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { createCitizen, getCitizens, getCitizenWithStamps, updateCitizen } from "@/lib/api/citizens";
@@ -25,8 +25,17 @@ export function CitizensPageClient() {
   const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
   const [isLoadingCitizens, setIsLoadingCitizens] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [totalCitizens, setTotalCitizens] = useState(mockCitizens.length);
+  const [filters, setFilters] = useState<CitizensListFilters>({
+    search: "",
+    birthDate: "",
+    registrationAddress: "",
+    passport: "",
+    sortBy: "full_name",
+    sortOrder: "asc"
+  });
 
-  const loadCitizens = useCallback(async () => {
+  const loadCitizens = useCallback(async (nextFilters: CitizensListFilters) => {
     if (!token) {
       return;
     }
@@ -34,7 +43,21 @@ export function CitizensPageClient() {
     try {
       setIsLoadingCitizens(true);
       setActionError("");
-      setCitizens(await getCitizens(token, { limit: 100, sortBy: "updated_at", sortOrder: "desc" }));
+      const passportParts = parsePassportFilter(nextFilters.passport);
+      const response = await getCitizens(token, {
+        search: nextFilters.search.trim() || undefined,
+        birthDate: toApiDate(nextFilters.birthDate),
+        registrationAddress: nextFilters.registrationAddress.trim() || undefined,
+        passportSeries: passportParts.passportSeries,
+        passportNumber: passportParts.passportNumber,
+        sortBy: nextFilters.sortBy,
+        sortOrder: nextFilters.sortOrder,
+        limit: 50,
+        offset: 0
+      });
+
+      setCitizens(response.items);
+      setTotalCitizens(response.total);
     } catch (error) {
       setActionError(getReadableApiError(error, "Не удалось загрузить граждан с backend"));
     } finally {
@@ -43,8 +66,12 @@ export function CitizensPageClient() {
   }, [token]);
 
   useEffect(() => {
-    void loadCitizens();
-  }, [loadCitizens]);
+    const timeoutId = window.setTimeout(() => {
+      void loadCitizens(filters);
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filters, loadCitizens]);
 
   const totalCount = citizens.length;
   const maleCount = citizens.filter((citizen) => citizen.gender === "male").length;
@@ -56,6 +83,7 @@ export function CitizensPageClient() {
       const nextCitizen = await createCitizen(values, token);
 
       setCitizens((current) => [nextCitizen, ...current]);
+      setTotalCitizens((current) => current + 1);
       setIsCreateOpen(false);
     } catch (error) {
       setActionError(getReadableApiError(error, "Не удалось создать карточку гражданина"));
@@ -119,7 +147,7 @@ export function CitizensPageClient() {
       >
         <main>
           <section className="grid grid-cols-4 gap-3">
-            <StatCard icon={UsersRound} label="Всего записей" value={totalCount} />
+            <StatCard icon={UsersRound} label="Всего записей" value={totalCitizens || totalCount} />
             <StatCard icon={UsersRound} label="Мужчины" value={maleCount} accent />
             <StatCard icon={UsersRound} label="Женщины" value={femaleCount} accent />
             <button
@@ -132,7 +160,7 @@ export function CitizensPageClient() {
             </button>
           </section>
 
-          <CitizensToolbar />
+          <CitizensToolbar filters={filters} onChange={setFilters} />
 
           {actionError ? (
             <div className="mt-4 rounded-[14px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-[14px] text-destructive">
@@ -195,4 +223,31 @@ function getReadableApiError(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function parsePassportFilter(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return {};
+  }
+
+  if (digits.length <= 4) {
+    return { passportSeries: digits };
+  }
+
+  return {
+    passportSeries: digits.slice(0, 4),
+    passportNumber: digits.slice(4, 10)
+  };
+}
+
+function toApiDate(value: string) {
+  const match = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+
+  if (!match) {
+    return undefined;
+  }
+
+  return `${match[3]}-${match[2]}-${match[1]}`;
 }

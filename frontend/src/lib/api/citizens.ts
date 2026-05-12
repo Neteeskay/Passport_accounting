@@ -10,6 +10,9 @@ import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
 type CitizensListResponse = ApiCitizen[] | {
+  total?: number;
+  limit?: number;
+  offset?: number;
   items?: ApiCitizen[];
   results?: ApiCitizen[];
   data?: ApiCitizen[];
@@ -44,7 +47,12 @@ export async function getCitizens(token?: string | null, params: CitizensSearchP
     }
   });
 
-  return unwrapCitizens(data).map(apiCitizenToCitizen);
+  return {
+    total: Array.isArray(data) ? data.length : data.total ?? unwrapCitizens(data).length,
+    limit: Array.isArray(data) ? params.limit ?? data.length : data.limit ?? params.limit ?? 50,
+    offset: Array.isArray(data) ? params.offset ?? 0 : data.offset ?? params.offset ?? 0,
+    items: unwrapCitizens(data).map(apiCitizenToCitizen)
+  };
 }
 
 export async function createCitizen(values: CitizenFormValues, token?: string | null) {

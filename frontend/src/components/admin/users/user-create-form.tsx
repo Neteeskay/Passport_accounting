@@ -4,12 +4,13 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { User, UserRole } from "@/types/user";
+import type { CreateUserPayload } from "@/lib/api/users";
+import type { UserRole } from "@/types/user";
 import { RoleSelect } from "./role-select";
 
 type UserCreateFormProps = {
   onCancel: () => void;
-  onCreate: (user: User) => void;
+  onCreate: (user: CreateUserPayload) => void | Promise<void>;
 };
 
 export function UserCreateForm({ onCancel, onCreate }: UserCreateFormProps) {
@@ -18,16 +19,14 @@ export function UserCreateForm({ onCancel, onCreate }: UserCreateFormProps) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("operator");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    onCreate({
-      id: `user-${crypto.randomUUID()}`,
+    await onCreate({
       login: login.trim(),
       password,
       role,
-      fullName: fullName.trim(),
-      createdAt: new Date().toISOString()
+      fullName: fullName.trim()
     });
 
     setLogin("");
