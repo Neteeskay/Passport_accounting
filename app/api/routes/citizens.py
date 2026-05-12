@@ -16,6 +16,7 @@ from app.services.citizens import (
     CitizenNotFoundError,
     RelatedUserNotFoundError,
     create_citizen,
+    delete_citizen,
     get_citizen,
     list_citizens,
     update_citizen,
@@ -92,3 +93,13 @@ def update_citizen_endpoint(citizen_id: int, payload: CitizenUpdateRequest) -> C
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
     return CitizenResponse(**citizen)
+
+
+@router.delete("/{citizen_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_citizen_endpoint(citizen_id: int) -> Response:
+    try:
+        delete_citizen(citizen_id)
+    except CitizenNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -109,6 +109,7 @@ CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 - `GET /api/v1/citizens/{citizen_id}/pdf` — экспорт карточки гражданина в PDF
 - `POST /api/v1/citizens` — создание новой карточки гражданина
 - `PUT /api/v1/citizens/{citizen_id}` — редактирование существующей карточки гражданина
+- `DELETE /api/v1/citizens/{citizen_id}` — полное удаление карточки гражданина и связанных записей
 - `GET /api/v1/citizens/{citizen_id}/stamps` — выдача истории штампов гражданина
 - `POST /api/v1/citizens/{citizen_id}/stamps` — добавление нового штампа
 - `PUT /api/v1/citizens/{citizen_id}/stamps/{stamp_id}` — изменение существующего штампа
@@ -181,6 +182,8 @@ CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```text
 GET /api/v1/citizens/{citizen_id}/stamps?stamp_category=registration
 ```
+
+Удаление карточки гражданина через `DELETE /api/v1/citizens/{citizen_id}` очищает и связанные записи в `stamps`, потому что между `citizens` и `stamps` настроен `ON DELETE CASCADE`.
 
 ## Ближайшие шаги
 

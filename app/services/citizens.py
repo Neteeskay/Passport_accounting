@@ -418,6 +418,19 @@ def get_citizen(citizen_id: int) -> dict:
         return _fetch_citizen(connection, citizen_id)
 
 
+def delete_citizen(citizen_id: int) -> None:
+    with get_connection() as connection:
+        existing_row = connection.execute(
+            "SELECT id FROM citizens WHERE id = ? LIMIT 1",
+            (citizen_id,),
+        ).fetchone()
+        if existing_row is None:
+            raise CitizenNotFoundError(f"Citizen with id={citizen_id} was not found.")
+
+        connection.execute("DELETE FROM citizens WHERE id = ?", (citizen_id,))
+        connection.commit()
+
+
 def update_citizen(citizen_id: int, payload: dict) -> dict:
     citizen_data = _normalize_citizen_payload(payload)
     stamps = citizen_data.pop("stamps")
