@@ -3,6 +3,7 @@
 import { Download, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { isValidBirthDateFilter } from "@/lib/utils/filter-validation";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import type { Citizen } from "@/types/citizen";
 import { RegistryFilters, type RegistryFilters as RegistryFiltersState } from "./registry-filters";
@@ -11,8 +12,7 @@ import { RegistryTable } from "./registry-table";
 const emptyFilters: RegistryFiltersState = {
   query: "",
   gender: "all",
-  birthDateFrom: "",
-  birthDateTo: "",
+  birthDate: "",
   passport: "",
   address: ""
 };
@@ -99,31 +99,30 @@ function matchesFilters(citizen: Citizen, filters: RegistryFiltersState) {
     return false;
   }
 
-  return isInsideDateRange(citizen.birthDate, filters.birthDateFrom, filters.birthDateTo);
+  return matchesBirthDate(citizen.birthDate, filters.birthDate);
 }
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function isInsideDateRange(value: string, from: string, to: string) {
-  const date = parseDate(value);
-  const start = parseDate(from);
-  const end = parseDate(to);
-
-  if (!date) {
+function matchesBirthDate(value: string, filter: string) {
+  if (!filter) {
     return true;
   }
 
-  if (start && date < start) {
-    return false;
+  if (!isValidBirthDateFilter(filter)) {
+    return true;
   }
 
-  if (end && date > end) {
-    return false;
+  const date = parseDate(value);
+  const expectedDate = parseDate(filter);
+
+  if (!date || !expectedDate) {
+    return true;
   }
 
-  return true;
+  return date.toDateString() === expectedDate.toDateString();
 }
 
 function parseDate(value: string) {

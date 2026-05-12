@@ -1,6 +1,8 @@
 "use client";
 
-import { Shield, Trash2, UserRound } from "lucide-react";
+import { Save, Shield, Trash2, UserRound } from "lucide-react";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import type { User, UserRole } from "@/types/user";
 import { RoleSelect } from "./role-select";
 
@@ -12,13 +14,15 @@ const roleLabels: Record<UserRole, string> = {
 type UserRowProps = {
   user: User;
   onDelete: (userId: string) => void;
-  onRoleChange: (userId: string, role: UserRole) => void;
+  onSave: (userId: string, values: { fullName: string; login: string; role: UserRole }) => void;
 };
 
-export function UserRow({ user, onDelete, onRoleChange }: UserRowProps) {
+export function UserRow({ user, onDelete, onSave }: UserRowProps) {
+  const [fullName, setFullName] = useState(user.fullName);
+  const [login, setLogin] = useState(user.login);
+  const [role, setRole] = useState<UserRole>(user.role);
   const isAdmin = user.role === "admin";
   const Icon = isAdmin ? Shield : UserRound;
-  const displayName = user.fullName || roleLabels[user.role];
 
   return (
     <article className="flex min-h-[72px] items-center justify-between gap-4 rounded-[18px] border border-border bg-card px-4 py-3">
@@ -26,21 +30,39 @@ export function UserRow({ user, onDelete, onRoleChange }: UserRowProps) {
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
           <Icon className={isAdmin ? "h-4 w-4 text-primary" : "h-4 w-4"} />
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold leading-5 text-foreground">
-            {displayName}
-          </p>
-          <p className="mt-0.5 truncate text-[13px] leading-4 text-foreground">@{user.login}</p>
+        <div className="grid min-w-0 grid-cols-[minmax(180px,260px)_minmax(140px,220px)] gap-2">
+          <Input
+            aria-label="Отображаемое имя"
+            className="h-9 rounded-full text-[13px]"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            placeholder={roleLabels[role]}
+          />
+          <Input
+            aria-label="Логин"
+            className="h-9 rounded-full text-[13px]"
+            value={login}
+            onChange={(event) => setLogin(event.target.value)}
+            placeholder="Логин"
+          />
         </div>
       </div>
 
       <div className="flex items-center gap-5">
         <RoleSelect
           className="w-[158px]"
-          value={user.role}
+          value={role}
           aria-label={`Роль пользователя ${user.login}`}
-          onChange={(role) => onRoleChange(user.id, role)}
+          onChange={setRole}
         />
+        <button
+          className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition hover:bg-muted hover:text-primary"
+          type="button"
+          onClick={() => onSave(user.id, { fullName, login, role })}
+          aria-label={`Сохранить пользователя ${user.login}`}
+        >
+          <Save className="h-4 w-4" />
+        </button>
         <button
           className="flex h-9 w-9 items-center justify-center rounded-full text-destructive transition hover:bg-destructive/10"
           type="button"

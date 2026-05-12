@@ -8,9 +8,16 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
 import { checkAdminSession } from "@/lib/api/system";
-import { createAuthUser, type CreateUserPayload } from "@/lib/api/users";
+import {
+  createAuthUser,
+  deleteAuthUser,
+  getAuthUsers,
+  updateAuthUser,
+  type CreateUserPayload,
+  type UpdateUserPayload
+} from "@/lib/api/users";
 import { mockUsers } from "@/lib/mock-data/users";
-import type { User, UserRole } from "@/types/user";
+import type { User } from "@/types/user";
 import { UserCreateForm } from "./user-create-form";
 import { UserRow } from "./user-row";
 
@@ -18,6 +25,7 @@ export function UserManagementPage() {
   const { token, user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [accessError, setAccessError] = useState("");
   const [actionError, setActionError] = useState("");
 
@@ -35,15 +43,39 @@ export function UserManagementPage() {
     });
   }, [token]);
 
-  const handleRoleChange = (userId: string, role: UserRole) => {
-    setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role } : user)));
-  };
+  useEffect(() => {
+    if (!token || !isAdmin || accessError) {
+      return;
+    }
 
-  const handleDelete = (userId: string) => {
+    setIsLoadingUsers(true);
+    getAuthUsers(token)
+      .then(setUsers)
+      .catch((error) => setActionError(error instanceof ApiError ? error.message : "Не удалось загрузить пользователей"))
+      .finally(() => setIsLoadingUsers(false));
+  }, [accessError, isAdmin, token]);
+
+  const handleDelete = async (userId: string) => {
     const user = users.find((item) => item.id === userId);
 
     if (user && window.confirm(`Удалить пользователя @${user.login}?`)) {
-      setUsers((current) => current.filter((item) => item.id !== userId));
+      try {
+        await deleteAuthUser(userId, token);
+        setUsers((current) => current.filter((item) => item.id !== userId));
+      } catch (error) {
+        setActionError(error instanceof ApiError ? error.message : "Не удалось удалить пользователя");
+      }
+    }
+  };
+
+  const handleSave = async (userId: string, values: UpdateUserPayload) => {
+    try {
+      setActionError("");
+      const user = await updateAuthUser(userId, values, token);
+
+      setUsers((current) => current.map((item) => (item.id === userId ? user : item)));
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "Не удалось сохранить пользователя");
     }
   };
 
@@ -101,6 +133,11 @@ export function UserManagementPage() {
               {actionError}
             </div>
           ) : null}
+          {isLoadingUsers ? (
+            <div className="mt-4 rounded-[14px] border border-border bg-card px-4 py-3 text-[14px] text-muted-foreground">
+              Загружаем пользователей из backend...
+            </div>
+          ) : null}
 
           <div className="mt-4 space-y-3">
             {users.map((user) => (
@@ -108,7 +145,7 @@ export function UserManagementPage() {
                 key={user.id}
                 user={user}
                 onDelete={handleDelete}
-                onRoleChange={handleRoleChange}
+                onSave={handleSave}
               />
             ))}
           </div>

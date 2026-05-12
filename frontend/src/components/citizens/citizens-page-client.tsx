@@ -13,6 +13,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { createCitizen, getCitizens, getCitizenWithStamps, updateCitizen } from "@/lib/api/citizens";
 import { ApiError } from "@/lib/api/client";
 import { mockCitizens } from "@/lib/mock-data/citizens";
+import { toApiDateFilter } from "@/lib/utils/filter-validation";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
@@ -46,7 +47,7 @@ export function CitizensPageClient() {
       const passportParts = parsePassportFilter(nextFilters.passport);
       const response = await getCitizens(token, {
         search: nextFilters.search.trim() || undefined,
-        birthDate: toApiDate(nextFilters.birthDate),
+        birthDate: toApiDateFilter(nextFilters.birthDate),
         registrationAddress: nextFilters.registrationAddress.trim() || undefined,
         passportSeries: passportParts.passportSeries,
         passportNumber: passportParts.passportNumber,
@@ -240,14 +241,4 @@ function parsePassportFilter(value: string) {
     passportSeries: digits.slice(0, 4),
     passportNumber: digits.slice(4, 10)
   };
-}
-
-function toApiDate(value: string) {
-  const match = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-
-  if (!match) {
-    return undefined;
-  }
-
-  return `${match[3]}-${match[2]}-${match[1]}`;
 }

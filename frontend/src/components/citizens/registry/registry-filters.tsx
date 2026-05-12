@@ -1,12 +1,17 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { FilterField } from "@/components/citizens/filters/filter-field";
+import {
+  formatBirthDateFilterInput,
+  formatPassportFilterInput,
+  getBirthDateFilterError
+} from "@/lib/utils/filter-validation";
 
 export type RegistryFilters = {
   query: string;
   gender: "all" | "male" | "female";
-  birthDateFrom: string;
-  birthDateTo: string;
+  birthDate: string;
   passport: string;
   address: string;
 };
@@ -17,13 +22,14 @@ type RegistryFiltersProps = {
 };
 
 export function RegistryFilters({ filters, onChange }: RegistryFiltersProps) {
+  const birthDateError = getBirthDateFilterError(filters.birthDate);
   const updateFilter = (name: keyof RegistryFilters, value: string) => {
     onChange({ ...filters, [name]: value });
   };
 
   return (
     <div className="rounded-[14px] border border-border bg-card p-4">
-      <div className="grid grid-cols-[minmax(190px,1fr)_104px_70px_116px_14px_116px_150px_170px] items-center gap-2">
+      <div className="grid grid-cols-[minmax(190px,1fr)_104px_132px_150px_170px] items-center gap-2">
         <label className="relative min-w-0">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -46,25 +52,21 @@ export function RegistryFilters({ filters, onChange }: RegistryFiltersProps) {
           <option value="female">Женщины</option>
         </select>
 
-        <span className="whitespace-nowrap text-[12px] font-medium text-foreground">Дата рожд.:</span>
-        <input
-          className="h-9 w-full rounded-[18px] border border-border bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
-          value={filters.birthDateFrom}
-          onChange={(event) => updateFilter("birthDateFrom", event.target.value)}
-          placeholder="дд.мм.гггг"
-        />
-        <span className="text-center text-[18px] leading-none text-foreground">—</span>
-        <input
-          className="h-9 w-full rounded-[18px] border border-border bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
-          value={filters.birthDateTo}
-          onChange={(event) => updateFilter("birthDateTo", event.target.value)}
-          placeholder="дд.мм.гггг"
-        />
+        <FilterField className="space-y-1" label="Дата рождения" error={birthDateError}>
+          <input
+            className="h-9 w-full rounded-[18px] border border-border bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15 aria-[invalid=true]:border-destructive/60 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/10"
+            aria-invalid={Boolean(birthDateError)}
+            value={filters.birthDate}
+            onChange={(event) => updateFilter("birthDate", formatBirthDateFilterInput(event.target.value))}
+            placeholder="дд.мм.гггг"
+          />
+        </FilterField>
         <input
           className="h-9 w-full rounded-[18px] border border-border bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
           value={filters.passport}
-          onChange={(event) => updateFilter("passport", event.target.value)}
-          placeholder="Серия / номер"
+          onChange={(event) => updateFilter("passport", formatPassportFilterInput(event.target.value))}
+          inputMode="numeric"
+          placeholder="1111 111111"
         />
         <input
           className="h-9 w-full rounded-[18px] border border-border bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45 focus:ring-2 focus:ring-primary/15"
