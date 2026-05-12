@@ -12,19 +12,23 @@ type BasicSectionProps = {
   control: Control<CitizenFormValues>;
   register: UseFormRegister<CitizenFormValues>;
   errors: FieldErrors<CitizenFormValues>;
+  onPhotoUpload?: (file: File) => Promise<string>;
   setValue: UseFormSetValue<CitizenFormValues>;
 };
 
-export function BasicSection({ control, register, errors, setValue }: BasicSectionProps) {
+export function BasicSection({ control, register, errors, onPhotoUpload, setValue }: BasicSectionProps) {
   const photoUrl = useWatch({ control, name: "photoUrl" });
 
   return (
     <FormSection title="Основная информация">
       <div className="grid grid-cols-[112px_1fr] gap-6">
-        <PhotoUploader
-          value={photoUrl}
-          onChange={(value) => setValue("photoUrl", value, { shouldDirty: true, shouldValidate: true })}
-        />
+        <FormField label="Фото" error={errors.photoUrl?.message}>
+          <PhotoUploader
+            onUpload={onPhotoUpload}
+            value={photoUrl}
+            onChange={(value) => setValue("photoUrl", value, { shouldDirty: true, shouldValidate: true })}
+          />
+        </FormField>
 
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">

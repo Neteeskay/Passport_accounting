@@ -2,19 +2,22 @@
 
 import { ImagePlus, X } from "lucide-react";
 import { useId, useState } from "react";
+import { resolveApiAssetUrl } from "@/lib/api/assets";
 
 type PhotoUploaderProps = {
   value?: string;
   onChange: (value: string) => void;
+  onUpload?: (file: File) => Promise<string>;
 };
 
 const allowedTypes = ["image/jpeg", "image/png"];
 
-export function PhotoUploader({ value, onChange }: PhotoUploaderProps) {
+export function PhotoUploader({ value, onChange, onUpload }: PhotoUploaderProps) {
   const inputId = useId();
   const [error, setError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (file?: File) => {
+  const handleFileChange = async (file?: File) => {
     setError("");
 
     if (!file) {
@@ -26,12 +29,21 @@ export function PhotoUploader({ value, onChange }: PhotoUploaderProps) {
       return;
     }
 
+    if (onUpload) {
+      try {
+        setIsUploading(true);
+        onChange(await onUpload(file));
+      } catch {
+        setError("Не удалось загрузить фото");
+      } finally {
+        setIsUploading(false);
+      }
+
+      return;
+    }
+
     const reader = new FileReader();
-
-    reader.onload = () => {
-      onChange(typeof reader.result === "string" ? reader.result : "");
-    };
-
+    reader.onload = () => onChange(typeof reader.result === "string" ? reader.result : "");
     reader.readAsDataURL(file);
   };
 
@@ -43,7 +55,7 @@ export function PhotoUploader({ value, onChange }: PhotoUploaderProps) {
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img alt="Фото гражданина" className="h-full w-full object-cover" src={value} />
+          <img alt="Фото гражданина" className="h-full w-full object-cover" src={resolveApiAssetUrl(value)} />
         ) : (
           <span className="flex flex-col items-center gap-2 text-muted-foreground transition group-hover:text-primary">
             <ImagePlus className="h-7 w-7" />
@@ -62,7 +74,7 @@ export function PhotoUploader({ value, onChange }: PhotoUploaderProps) {
 
       <div className="flex w-[112px] flex-col items-center gap-1">
         <label className="cursor-pointer text-center text-[12px] font-medium text-primary hover:text-primary/80" htmlFor={inputId}>
-          {value ? "Заменить фото" : "Загрузить фото"}
+          {isUploading ? "Загружаем..." : value ? "Заменить фото" : "Загрузить фото"}
         </label>
         {value ? (
           <button

@@ -1,103 +1,45 @@
 "use client";
 
 import { Download, UsersRound } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuthSession } from "@/components/auth/use-auth-session";
 import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
 import { CitizenFormModal } from "@/components/citizens/form/citizen-form-modal";
 import { CitizensRegistryModal } from "@/components/citizens/registry/citizens-registry-modal";
-import { CitizensToolbar, type CitizensListFilters } from "@/components/citizens/citizens-toolbar";
+import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
+import { useCitizens } from "@/components/citizens/use-citizens";
 import { AppShell } from "@/components/layout/app-shell";
-import { createCitizen, getCitizens, getCitizenWithStamps, updateCitizen } from "@/lib/api/citizens";
-import { ApiError } from "@/lib/api/client";
-import { mockCitizens } from "@/lib/mock-data/citizens";
-import { toApiDateFilter } from "@/lib/utils/filter-validation";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
 export function CitizensPageClient() {
   const { endSession, token, user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
-  const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
+  const {
+    actionError,
+    citizens,
+    createCitizenCard,
+    deleteCitizenCard,
+    filters,
+    isLoadingCitizens,
+    loadCitizenDetails,
+    setFilters,
+    stats,
+    updateCitizenCard,
+    uploadPhoto
+  } = useCitizens(token);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
   const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
-  const [isLoadingCitizens, setIsLoadingCitizens] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const [totalCitizens, setTotalCitizens] = useState(mockCitizens.length);
-  const [filters, setFilters] = useState<CitizensListFilters>({
-    search: "",
-    birthDate: "",
-    registrationAddress: "",
-    passport: "",
-    sortBy: "full_name",
-    sortOrder: "asc"
-  });
 
-  const loadCitizens = useCallback(async (nextFilters: CitizensListFilters) => {
-    if (!token) {
-      return;
-    }
-
-    try {
-      setIsLoadingCitizens(true);
-      setActionError("");
-      const passportParts = parsePassportFilter(nextFilters.passport);
-      const response = await getCitizens(token, {
-        search: nextFilters.search.trim() || undefined,
-        birthDate: toApiDateFilter(nextFilters.birthDate),
-        registrationAddress: nextFilters.registrationAddress.trim() || undefined,
-        passportSeries: passportParts.passportSeries,
-        passportNumber: passportParts.passportNumber,
-        sortBy: nextFilters.sortBy,
-        sortOrder: nextFilters.sortOrder,
-        limit: 50,
-        offset: 0
-      });
-
-      setCitizens(response.items);
-      setTotalCitizens(response.total);
-    } catch (error) {
-      setActionError(getReadableApiError(error, "Не удалось загрузить граждан с backend"));
-    } finally {
-      setIsLoadingCitizens(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadCitizens(filters);
-    }, 350);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [filters, loadCitizens]);
-
-  const totalCount = citizens.length;
-  const maleCount = citizens.filter((citizen) => citizen.gender === "male").length;
-  const femaleCount = citizens.filter((citizen) => citizen.gender === "female").length;
+  const isAdmin = currentUser?.role === "admin";
+  const roleLabel = currentUser?.role === "operator" ? "Оператор" : "Администратор";
 
   const handleCreateCitizen = async (values: CitizenFormValues) => {
-    try {
-      setActionError("");
-      const nextCitizen = await createCitizen(values, token);
-
-      setCitizens((current) => [nextCitizen, ...current]);
-      setTotalCitizens((current) => current + 1);
-      setIsCreateOpen(false);
-    } catch (error) {
-      setActionError(getReadableApiError(error, "Не удалось создать карточку гражданина"));
-      throw error;
-    }
-  };
-
-  const handleDeleteCitizen = (citizen: Citizen) => {
-    const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
-
-    if (window.confirm(`Удалить запись гражданина ${fullName}?`)) {
-      setCitizens((current) => current.filter((item) => item.id !== citizen.id));
-    }
+    await createCitizenCard(values);
+    setIsCreateOpen(false);
   };
 
   const handleUpdateCitizen = async (values: CitizenFormValues) => {
@@ -105,37 +47,19 @@ export function CitizensPageClient() {
       return;
     }
 
-    try {
-      setActionError("");
-      const updatedCitizen = await updateCitizen(editingCitizen.id, values, token);
-
-      setCitizens((current) =>
-        current.map((citizen) => (citizen.id === editingCitizen.id ? updatedCitizen : citizen))
-      );
-      setEditingCitizen(null);
-    } catch (error) {
-      setActionError(getReadableApiError(error, "Не удалось сохранить изменения"));
-      throw error;
-    }
+    await updateCitizenCard(editingCitizen.id, values);
+    setEditingCitizen(null);
   };
 
   const handleViewCitizen = async (citizen: Citizen) => {
     setSelectedCitizen(citizen);
-
-    try {
-      const detailedCitizen = await getCitizenWithStamps(citizen, token);
-
-      setSelectedCitizen(detailedCitizen);
-      setCitizens((current) =>
-        current.map((item) => (item.id === detailedCitizen.id ? detailedCitizen : item))
-      );
-    } catch {
-      // Просмотр основных данных остаётся доступным, даже если история штампов временно недоступна.
-    }
+    setSelectedCitizen(await loadCitizenDetails(citizen));
   };
 
-  const isAdmin = currentUser?.role === "admin";
-  const roleLabel = currentUser?.role === "operator" ? "Оператор" : "Администратор";
+  const handleEditCitizen = async (citizen: Citizen) => {
+    setEditingCitizen(citizen);
+    setEditingCitizen(await loadCitizenDetails(citizen));
+  };
 
   return (
     <>
@@ -148,9 +72,9 @@ export function CitizensPageClient() {
       >
         <main>
           <section className="grid grid-cols-4 gap-3">
-            <StatCard icon={UsersRound} label="Всего записей" value={totalCitizens || totalCount} />
-            <StatCard icon={UsersRound} label="Мужчины" value={maleCount} accent />
-            <StatCard icon={UsersRound} label="Женщины" value={femaleCount} accent />
+            <StatCard icon={UsersRound} label="Всего записей" value={stats.totalCount} />
+            <StatCard icon={UsersRound} label="Мужчины" value={stats.maleCount} accent />
+            <StatCard icon={UsersRound} label="Женщины" value={stats.femaleCount} accent />
             <button
               className="flex h-[92px] flex-col items-center justify-center rounded-[16px] border border-border bg-card text-[13px] shadow-soft transition hover:bg-muted"
               type="button"
@@ -181,8 +105,8 @@ export function CitizensPageClient() {
                 <CitizenCard
                   citizen={citizen}
                   key={citizen.id}
-                  onDelete={isAdmin ? handleDeleteCitizen : undefined}
-                  onEdit={setEditingCitizen}
+                  onDelete={isAdmin ? deleteCitizenCard : undefined}
+                  onEdit={(citizen) => void handleEditCitizen(citizen)}
                   onView={(citizen) => void handleViewCitizen(citizen)}
                 />
               ))}
@@ -195,6 +119,7 @@ export function CitizensPageClient() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateCitizen}
+        onPhotoUpload={uploadPhoto}
       />
       <CitizenFormModal
         citizen={editingCitizen}
@@ -202,6 +127,7 @@ export function CitizensPageClient() {
         open={Boolean(editingCitizen)}
         onClose={() => setEditingCitizen(null)}
         onCreate={handleCreateCitizen}
+        onPhotoUpload={uploadPhoto}
         onUpdate={handleUpdateCitizen}
       />
       <CitizenDetailModal
@@ -216,29 +142,4 @@ export function CitizensPageClient() {
       />
     </>
   );
-}
-
-function getReadableApiError(error: unknown, fallback: string) {
-  if (error instanceof ApiError && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-}
-
-function parsePassportFilter(value: string) {
-  const digits = value.replace(/\D/g, "");
-
-  if (!digits) {
-    return {};
-  }
-
-  if (digits.length <= 4) {
-    return { passportSeries: digits };
-  }
-
-  return {
-    passportSeries: digits.slice(0, 4),
-    passportNumber: digits.slice(4, 10)
-  };
 }

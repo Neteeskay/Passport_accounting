@@ -13,8 +13,9 @@ type CitizenFormModalProps = {
   mode?: "create" | "edit";
   open: boolean;
   onClose: () => void;
-  onCreate: (values: CitizenFormValues) => void;
-  onUpdate?: (values: CitizenFormValues) => void;
+  onCreate: (values: CitizenFormValues) => void | Promise<void>;
+  onPhotoUpload?: (file: File) => Promise<string>;
+  onUpdate?: (values: CitizenFormValues) => void | Promise<void>;
 };
 
 export function CitizenFormModal({
@@ -23,6 +24,7 @@ export function CitizenFormModal({
   open,
   onClose,
   onCreate,
+  onPhotoUpload,
   onUpdate
 }: CitizenFormModalProps) {
   const defaultValues = useMemo(() => (citizen ? mapCitizenToFormValues(citizen) : undefined), [citizen]);
@@ -34,9 +36,9 @@ export function CitizenFormModal({
   const isEdit = mode === "edit";
 
   return (
-    <ModalOverlay className="items-start justify-center px-4 py-10" contentClassName="w-full max-w-[980px]">
-      <div className="w-full rounded-[22px] bg-card shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
-        <div className="flex items-center justify-between px-7 pb-4 pt-6">
+    <ModalOverlay className="items-start justify-center overflow-y-auto px-4 py-6" contentClassName="w-full max-w-[980px]">
+      <div className="flex max-h-[calc(100vh-48px)] w-full flex-col rounded-[22px] bg-card shadow-[0_30px_80px_rgba(0,0,0,0.18)]">
+        <div className="shrink-0 flex items-center justify-between px-7 pb-4 pt-6">
           <h2 className="text-[18px] font-semibold text-foreground">
             {isEdit ? "Редактирование записи" : "Новая запись гражданина"}
           </h2>
@@ -50,12 +52,15 @@ export function CitizenFormModal({
           </button>
         </div>
 
-        <CitizenForm
-          defaultValues={defaultValues}
-          onCancel={onClose}
-          onSubmitSuccess={isEdit && onUpdate ? onUpdate : onCreate}
-          submitLabel={isEdit ? "Сохранить" : "Добавить"}
-        />
+        <div className="min-h-0 flex-1">
+          <CitizenForm
+            defaultValues={defaultValues}
+            onCancel={onClose}
+            onPhotoUpload={onPhotoUpload}
+            onSubmitSuccess={isEdit && onUpdate ? onUpdate : onCreate}
+            submitLabel={isEdit ? "Сохранить" : "Добавить"}
+          />
+        </div>
       </div>
     </ModalOverlay>
   );

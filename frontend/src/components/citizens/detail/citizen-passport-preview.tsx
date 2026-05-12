@@ -1,11 +1,14 @@
 import type {
   ChildRecord,
   Citizen,
+  ForeignPassportRecord,
   HistoryRecord,
   MarriageRecord,
   MilitaryRecord,
+  NameChangeRecord,
   RegistrationStamp
 } from "@/types/citizen";
+import { resolveApiAssetUrl } from "@/lib/api/assets";
 
 type CitizenPassportPreviewProps = {
   citizen: Citizen;
@@ -25,6 +28,10 @@ export function CitizenPassportPreview({ citizen }: CitizenPassportPreviewProps)
       <MarriagePage records={getMarriageRecords(citizen)} />
       <Divider />
       <MilitaryPage records={getMilitaryRecords(citizen)} />
+      <Divider />
+      <ForeignPassportPage records={getForeignPassports(citizen)} />
+      <Divider />
+      <NameChangePage records={getNameChanges(citizen)} />
       <Divider />
       <HistoryPage records={getHistoryRecords(citizen)} />
     </div>
@@ -156,6 +163,55 @@ function MilitaryPage({ records }: { records: MilitaryRecord[] }) {
   );
 }
 
+function ForeignPassportPage({ records }: { records: ForeignPassportRecord[] }) {
+  return (
+    <PassportPage title="Заграничные паспорта">
+      {records.map((record) => (
+        <StampBox key={record.id}>
+          <Badge tone="rose">Выдан заграничный паспорт</Badge>
+          <div className="grid grid-cols-3 gap-5">
+            <PassportLine label="Дата выдачи" value={formatDate(record.issueDate)} />
+            <PassportLine label="Серия" value={record.series} strong />
+            <PassportLine label="Номер" value={record.number} strong />
+          </div>
+          <PassportLine label="Кем выдан" value={record.authority} />
+          {record.note ? <PassportLine label="Примечание" value={record.note} /> : null}
+        </StampBox>
+      ))}
+    </PassportPage>
+  );
+}
+
+function NameChangePage({ records }: { records: NameChangeRecord[] }) {
+  return (
+    <PassportPage title="Смена ФИО">
+      {records.map((record) => (
+        <StampBox key={record.id}>
+          <Badge tone="rose">{record.reason || "Смена ФИО"}</Badge>
+          <PassportLine label="Дата" value={formatDate(record.date)} />
+          <div className="grid grid-cols-2 gap-5">
+            <PassportLine
+              label="Прежние данные"
+              value={formatPersonName(record.previousLastName, record.previousFirstName, record.previousMiddleName).toUpperCase()}
+              strong
+            />
+            <PassportLine
+              label="Новые данные"
+              value={formatPersonName(record.newLastName, record.newFirstName, record.newMiddleName).toUpperCase()}
+              strong
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            <PassportLine label="Орган регистрации" value={record.authority} />
+            <PassportLine label="Номер документа" value={record.documentNumber} />
+          </div>
+          {record.note ? <PassportLine label="Примечание" value={record.note} /> : null}
+        </StampBox>
+      ))}
+    </PassportPage>
+  );
+}
+
 function HistoryPage({ records }: { records: HistoryRecord[] }) {
   return (
     <PassportPage title="История паспортов">
@@ -247,7 +303,7 @@ function PhotoBox({ photoUrl }: { photoUrl?: string }) {
     <div className="flex h-[160px] w-[118px] shrink-0 items-center justify-center overflow-hidden border border-[#8f8b80] bg-[#f7f3ea]">
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={photoUrl} alt="Фото гражданина" className="h-full w-full object-cover" />
+        <img src={resolveApiAssetUrl(photoUrl)} alt="Фото гражданина" className="h-full w-full object-cover" />
       ) : (
         <div className="relative flex h-[98px] w-[80px] items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#fff3ee_0%,#e6e7ea_100%)]">
           <div className="absolute top-[13px] h-8 w-8 rounded-full border-[3px] border-[#171717]" />
@@ -299,100 +355,29 @@ function formatAddress(stamp: RegistrationStamp) {
 }
 
 function getRegistrationStamps(citizen: Citizen) {
-  if (citizen.registrationStamps?.length) {
-    return citizen.registrationStamps;
-  }
-
-  return [
-    {
-      id: "fallback-registration",
-      type: "registration" as const,
-      date: "2020-03-04",
-      region: "ДНР",
-      district: "",
-      locality: "г. Донецк",
-      settlement: "",
-      street: "ул. Пушкина",
-      house: "30",
-      apartment: "30",
-      authority: "МВД",
-      departmentCode: "222-222",
-      certifier: ""
-    }
-  ];
+  return citizen.registrationStamps ?? [];
 }
 
 function getChildren(citizen: Citizen) {
-  if (citizen.children?.length) {
-    return citizen.children;
-  }
-
-  return [
-    {
-      id: "fallback-child",
-      lastName: "Иванов",
-      firstName: "Александр",
-      middleName: "Иванович",
-      gender: "male" as const,
-      birthDate: "2023-12-12",
-      personalMark: ""
-    }
-  ];
+  return citizen.children ?? [];
 }
 
 function getMarriageRecords(citizen: Citizen) {
-  if (citizen.marriageRecords?.length) {
-    return citizen.marriageRecords;
-  }
-
-  return [
-    {
-      id: "fallback-marriage",
-      status: "registered" as const,
-      date: "2021-12-23",
-      spouseLastName: "Иванова",
-      spouseFirstName: "Анна",
-      spouseMiddleName: "Алексеевна",
-      spouseBirthDate: "1989-03-12",
-      authority: "ЗАГС",
-      actRecordNumber: "13334343",
-      certifier: ""
-    }
-  ];
+  return citizen.marriageRecords ?? [];
 }
 
 function getMilitaryRecords(citizen: Citizen) {
-  if (citizen.militaryRecords?.length) {
-    return citizen.militaryRecords;
-  }
+  return citizen.militaryRecords ?? [];
+}
 
-  return [
-    {
-      id: "fallback-military",
-      status: "liable" as const,
-      authority: "Военные комиссариат",
-      signedBy: "",
-      date: "2010-03-17"
-    }
-  ];
+function getForeignPassports(citizen: Citizen) {
+  return citizen.foreignPassports ?? [];
+}
+
+function getNameChanges(citizen: Citizen) {
+  return citizen.nameChanges ?? [];
 }
 
 function getHistoryRecords(citizen: Citizen) {
-  if (citizen.historyRecords?.length) {
-    return citizen.historyRecords;
-  }
-
-  return [
-    {
-      id: "fallback-history",
-      event: "Первичный (14 лет)",
-      isCurrent: false,
-      series: "2323",
-      number: "322332",
-      departmentCode: "323-223",
-      issueDate: "2004-03-06",
-      authority: "ГУ МВД",
-      note: ""
-    }
-  ];
+  return citizen.historyRecords ?? [];
 }

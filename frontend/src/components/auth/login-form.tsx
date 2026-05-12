@@ -3,11 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, Lock, LogIn, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { checkServiceHealth, checkSystemHealth, loginByPassword } from "@/lib/api/auth";
+import { loginByPassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 import { useAuthStore } from "@/store/auth-store";
@@ -17,6 +17,13 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const login = useAuthStore((state) => state.login);
+  const token = useAuthStore((state) => state.token);
+
+  useEffect(() => {
+    if (token) {
+      router.replace("/citizens");
+    }
+  }, [router, token]);
 
   const {
     register,
@@ -33,11 +40,11 @@ export function LoginForm() {
   const onSubmit = async (values: LoginFormValues) => {
     try {
       setAuthError("");
-      await Promise.any([checkServiceHealth(), checkSystemHealth()]);
       const session = await loginByPassword(values);
 
       login(session.user, session.token);
-      router.push("/citizens");
+      router.replace("/citizens");
+      router.refresh();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setAuthError("Неверный логин или пароль");

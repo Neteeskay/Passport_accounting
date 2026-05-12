@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { BasicSection } from "@/components/citizens/form/sections/basic-section";
 import { ChildrenSection } from "@/components/citizens/form/sections/children-section";
 import { ForeignPassportSection } from "@/components/citizens/form/sections/foreign-passport-section";
@@ -22,6 +22,7 @@ import {
 type CitizenFormProps = {
   defaultValues?: CitizenFormValues;
   onCancel: () => void;
+  onPhotoUpload?: (file: File) => Promise<string>;
   onSubmitSuccess: (values: CitizenFormValues) => void | Promise<void>;
   submitLabel?: string;
 };
@@ -29,6 +30,7 @@ type CitizenFormProps = {
 export function CitizenForm({
   defaultValues = citizenFormDefaultValues,
   onCancel,
+  onPhotoUpload,
   onSubmitSuccess,
   submitLabel = "Добавить"
 }: CitizenFormProps) {
@@ -56,13 +58,38 @@ export function CitizenForm({
     setActiveTab("basic");
   };
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="px-7 pb-7">
-      <CitizenFormTabs activeTab={activeTab} onChange={setActiveTab} />
+  const onInvalidSubmit = (formErrors: FieldErrors<CitizenFormValues>) => {
+    if (
+      formErrors.photoUrl ||
+      formErrors.lastName ||
+      formErrors.firstName ||
+      formErrors.birthDate ||
+      formErrors.birthPlace ||
+      formErrors.passportSeries ||
+      formErrors.passportNumber ||
+      formErrors.passportIssuedBy ||
+      formErrors.passportIssuedDate ||
+      formErrors.departmentCode
+    ) {
+      setActiveTab("basic");
+    }
+  };
 
-      <div className="mt-5 max-h-[68vh] overflow-y-auto pr-2">
+  return (
+    <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)} className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 px-7">
+        <CitizenFormTabs activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+
+      <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-7 pr-9">
         {activeTab === "basic" ? (
-          <BasicSection control={control} errors={errors} register={register} setValue={setValue} />
+          <BasicSection
+            control={control}
+            errors={errors}
+            onPhotoUpload={onPhotoUpload}
+            register={register}
+            setValue={setValue}
+          />
         ) : null}
         {activeTab === "registration" ? (
           <RegistrationSection control={control} errors={errors} register={register} />
@@ -87,7 +114,7 @@ export function CitizenForm({
         ) : null}
       </div>
 
-      <div className="mt-6 flex items-center justify-end gap-3 border-t border-border pt-5">
+      <div className="shrink-0 flex items-center justify-end gap-3 border-t border-border bg-card px-7 py-5">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Отмена
         </Button>

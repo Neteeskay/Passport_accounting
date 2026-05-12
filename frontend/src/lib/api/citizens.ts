@@ -1,13 +1,10 @@
 import { apiRequest } from "@/lib/api/client";
 import {
   apiCitizenToCitizen,
-  apiStampsToStamps,
   citizenFormToApiPayload,
-  type ApiCitizen,
-  type ApiStamp
+  type ApiCitizen
 } from "@/lib/api/citizen-mappers";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
-import type { Citizen } from "@/types/citizen";
 
 type CitizensListResponse = ApiCitizen[] | {
   total?: number;
@@ -19,13 +16,11 @@ type CitizensListResponse = ApiCitizen[] | {
 };
 
 export type CitizensSearchParams = {
-  search?: string;
-  birthDate?: string;
-  registrationAddress?: string;
-  passportSeries?: string;
-  passportNumber?: string;
-  sortBy?: "full_name" | "birth_date" | "created_at" | "updated_at" | "passport_series";
-  sortOrder?: "asc" | "desc";
+  query?: string;
+  gender?: "all" | "male" | "female";
+  birthDateFrom?: string;
+  passport?: string;
+  address?: string;
   limit?: number;
   offset?: number;
 };
@@ -35,13 +30,11 @@ export async function getCitizens(token?: string | null, params: CitizensSearchP
     method: "GET",
     token,
     params: {
-      search: params.search,
-      birth_date: params.birthDate,
-      registration_address: params.registrationAddress,
-      passport_series: params.passportSeries,
-      passport_number: params.passportNumber,
-      sort_by: params.sortBy,
-      sort_order: params.sortOrder,
+      query: params.query,
+      gender: params.gender && params.gender !== "all" ? params.gender : undefined,
+      birthDateFrom: params.birthDateFrom,
+      passport: params.passport,
+      address: params.address,
       limit: params.limit,
       offset: params.offset
     }
@@ -53,6 +46,15 @@ export async function getCitizens(token?: string | null, params: CitizensSearchP
     offset: Array.isArray(data) ? params.offset ?? 0 : data.offset ?? params.offset ?? 0,
     items: unwrapCitizens(data).map(apiCitizenToCitizen)
   };
+}
+
+export async function getCitizen(citizenId: string, token?: string | null) {
+  const data = await apiRequest<ApiCitizen>(`/api/v1/citizens/${citizenId}`, {
+    method: "GET",
+    token
+  });
+
+  return apiCitizenToCitizen(data);
 }
 
 export async function createCitizen(values: CitizenFormValues, token?: string | null) {
@@ -75,16 +77,22 @@ export async function updateCitizen(citizenId: string, values: CitizenFormValues
   return apiCitizenToCitizen(data);
 }
 
-export async function getCitizenWithStamps(citizen: Citizen, token?: string | null) {
-  const stamps = await apiRequest<ApiStamp[]>(`/api/v1/citizens/${citizen.id}/stamps`, {
-    method: "GET",
+export async function deleteCitizen(citizenId: string, token?: string | null) {
+  await apiRequest<void>(`/api/v1/citizens/${citizenId}`, {
+    method: "DELETE",
     token
   });
+}
 
-  return {
-    ...citizen,
-    stamps: apiStampsToStamps(stamps)
-  };
+export async function uploadCitizenPhoto(file: File, token?: string | null) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<{ fileName: string; photoUrl: string }>("/api/v1/citizens/photo", {
+    method: "POST",
+    token,
+    data: formData
+  });
 }
 
 function unwrapCitizens(data: CitizensListResponse) {

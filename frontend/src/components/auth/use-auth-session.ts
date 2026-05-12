@@ -13,12 +13,17 @@ type UseAuthSessionOptions = {
 
 export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessionOptions = {}) {
   const router = useRouter();
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
 
   const refreshCurrentUser = useCallback(async () => {
+    if (!hasHydrated) {
+      return;
+    }
+
     if (!token) {
       if (redirectOnUnauthorized) {
         router.push("/login");
@@ -40,7 +45,7 @@ export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessio
         }
       }
     }
-  }, [logout, redirectOnUnauthorized, router, setUser, token]);
+  }, [hasHydrated, logout, redirectOnUnauthorized, router, setUser, token]);
 
   const endSession = useCallback(async () => {
     try {
@@ -61,6 +66,7 @@ export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessio
     endSession,
     refreshCurrentUser,
     token,
-    user
+    user,
+    hasHydrated
   };
 }

@@ -1,15 +1,17 @@
 import {
+  Baby,
   CalendarDays,
   CreditCard,
   Eye,
+  FileText,
   Heart,
   MapPin,
   Pencil,
   Shield,
-  Trash2,
-  Users
+  Trash2
 } from "lucide-react";
-import type { Citizen } from "@/types/citizen";
+import { resolveApiAssetUrl } from "@/lib/api/assets";
+import type { Citizen, Stamp } from "@/types/citizen";
 
 type CitizenCardProps = {
   citizen: Citizen;
@@ -21,7 +23,8 @@ type CitizenCardProps = {
 export function CitizenCard({ citizen, onView, onEdit, onDelete }: CitizenCardProps) {
   const fullName = [citizen.lastName, citizen.firstName, citizen.middleName].filter(Boolean).join(" ");
   const genderLabel = citizen.gender === "male" ? "М" : "Ж";
-  const stampLabels = citizen.stamps.map((stamp) => stamp.comment).filter(Boolean).slice(0, 4) as string[];
+  const badges = buildCardBadges(citizen);
+  const registrationAddress = getRegistrationAddress(citizen);
 
   return (
     <article className="w-full max-w-[612px] rounded-[14px] border border-border bg-card p-5 shadow-soft">
@@ -29,7 +32,7 @@ export function CitizenCard({ citizen, onView, onEdit, onDelete }: CitizenCardPr
         <div className="flex h-[96px] w-[84px] shrink-0 items-center justify-center rounded-[18px] border border-border bg-background">
           {citizen.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img alt="Фото гражданина" className="h-full w-full rounded-[18px] object-cover" src={citizen.photoUrl} />
+            <img alt="Фото гражданина" className="h-full w-full rounded-[18px] object-cover" src={resolveApiAssetUrl(citizen.photoUrl)} />
           ) : (
             <div className="relative flex h-[68px] w-[56px] items-center justify-center rounded-[14px] bg-[linear-gradient(180deg,#fff3ee_0%,#f2f4f8_100%)]">
               <div className="absolute top-[9px] h-6 w-6 rounded-full border-2 border-foreground/90" />
@@ -47,31 +50,41 @@ export function CitizenCard({ citizen, onView, onEdit, onDelete }: CitizenCardPr
           </div>
 
           <div className="mt-2 space-y-2 text-[14px] leading-5 text-foreground">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" />
                 {formatDate(citizen.birthDate)}
               </span>
-              <span>{citizen.birthPlace}</span>
+              {citizen.birthPlace ? (
+                <>
+                  <DividerDot />
+                  <span>{citizen.birthPlace}</span>
+                </>
+              ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 {citizen.passportSeries} {citizen.passportNumber}
               </span>
-              <span>{citizen.passportIssuedBy}</span>
+              {citizen.passportIssuedDate ? (
+                <>
+                  <DividerDot />
+                  <span>выдан {formatDate(citizen.passportIssuedDate)}</span>
+                </>
+              ) : null}
             </div>
 
-            <div className="inline-flex items-start gap-2">
+            <div className="flex min-h-5 items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{citizen.registrationAddress}</span>
+              <span className="min-w-0 break-words">{registrationAddress || "Адрес регистрации не указан"}</span>
             </div>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {stampLabels.map((label) => (
-              <StampBadge key={label} label={label} />
+            {badges.map((badge) => (
+              <StampBadge badge={badge} key={badge.label} />
             ))}
           </div>
         </div>
@@ -111,21 +124,116 @@ export function CitizenCard({ citizen, onView, onEdit, onDelete }: CitizenCardPr
   );
 }
 
-function StampBadge({ label }: { label: string }) {
-  const icon = label.includes("реб") ? Users : label.includes("Брак") ? Heart : Shield;
+type CardBadge = {
+  icon: typeof Baby;
+  label: string;
+};
 
+function StampBadge({ badge }: { badge: CardBadge }) {
+  const Icon = badge.icon;
   return (
-    <span className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-[11px] text-muted-foreground">
-      {icon === Users ? <Users className="h-3 w-3" /> : null}
-      {icon === Heart ? <Heart className="h-3 w-3" /> : null}
-      {icon === Shield ? <Shield className="h-3 w-3" /> : null}
-      {label}
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-[12px] font-medium text-muted-foreground shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <Icon className="h-3.5 w-3.5" />
+      {badge.label}
     </span>
   );
 }
 
+function DividerDot() {
+  return <span className="h-1 w-1 rounded-full bg-muted-foreground/35" aria-hidden="true" />;
+}
+
+function buildCardBadges(citizen: Citizen): CardBadge[] {
+  const childCount = citizen.children?.length ?? countStampsByComment(citizen.stamps, "реб");
+  const hasMarriage = Boolean(citizen.marriageRecords?.length) || hasStamp(citizen.stamps, ["marital_status"], "Брак");
+  const hasMilitary = Boolean(citizen.militaryRecords?.length) || hasStamp(citizen.stamps, ["military_duty"], "Воин");
+  const passportCount = (citizen.historyRecords?.length ?? 0) + (citizen.foreignPassports?.length ?? 0);
+  const fallbackPassportCount = countStamps(citizen.stamps, ["foreign_passport"]) || countStampsByComment(citizen.stamps, "пасп");
+  const badges: CardBadge[] = [];
+
+  if (childCount > 0) {
+    badges.push({ icon: Baby, label: `${childCount} ${pluralize(childCount, ["ребёнок", "ребёнка", "детей"])}` });
+  }
+
+  if (hasMarriage) {
+    badges.push({ icon: Heart, label: "Брак" });
+  }
+
+  if (hasMilitary) {
+    badges.push({ icon: Shield, label: "Воинская" });
+  }
+
+  if (passportCount > 0 || fallbackPassportCount > 0) {
+    const count = passportCount || fallbackPassportCount;
+    badges.push({ icon: FileText, label: `${count} пасп.` });
+  }
+
+  return badges;
+}
+
+function getRegistrationAddress(citizen: Citizen) {
+  if (citizen.registrationAddress) {
+    return citizen.registrationAddress;
+  }
+
+  const registration = citizen.registrationStamps?.find((stamp) => stamp.type === "registration") ?? citizen.registrationStamps?.[0];
+
+  if (!registration) {
+    return "";
+  }
+
+  return [
+    registration.locality,
+    registration.settlement,
+    registration.street ? `ул. ${registration.street}` : "",
+    registration.house ? `д.${registration.house}` : "",
+    registration.apartment ? `кв.${registration.apartment}` : ""
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function countStamps(stamps: Stamp[], types: Stamp["type"][]) {
+  return stamps.filter((stamp) => types.includes(stamp.type)).length;
+}
+
+function countStampsByComment(stamps: Stamp[], labelPart: string) {
+  return stamps.filter((stamp) => stamp.comment?.toLowerCase().includes(labelPart.toLowerCase())).length;
+}
+
+function hasStamp(stamps: Stamp[], types: Stamp["type"][], labelPart: string) {
+  return stamps.some((stamp) => types.includes(stamp.type) && stamp.comment?.includes(labelPart));
+}
+
+function pluralize(count: number, [one, few, many]: [string, string, string]) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return one;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return few;
+  }
+
+  return many;
+}
+
 function formatDate(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) {
+    return value;
+  }
+
   const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
 
   return new Intl.DateTimeFormat("ru-RU").format(date);
 }

@@ -16,29 +16,42 @@ type ApiUser = {
 
 type LoginResponse = {
   access_token?: string;
+  accessToken?: string;
+  auth_token?: string;
   token?: string;
   token_type?: string;
   expires_in?: number;
   user?: ApiUser;
+  data?: LoginResponse;
 };
 
 export async function checkServiceHealth() {
-  return apiRequest<{ status?: string }>("/health");
+  return apiRequest<{ status?: string }>("/health", {
+    authMode: "none"
+  });
 }
 
 export async function checkSystemHealth() {
-  return apiRequest<{ status?: string }>("/api/v1/system/health");
+  return apiRequest<{ status?: string }>("/api/v1/system/health", {
+    authMode: "none"
+  });
 }
 
 export async function loginByPassword(values: LoginFormValues) {
-  const data = await apiRequest<LoginResponse>("/api/v1/auth/login", {
+  const response = await apiRequest<LoginResponse>("/api/v1/auth/login", {
+    authMode: "none",
     method: "POST",
     data: toLoginPayload(values)
   });
-  const token = data.access_token ?? data.token ?? null;
+  const data = unwrapLoginResponse(response);
+  const token = data.access_token ?? data.accessToken ?? data.auth_token ?? data.token ?? null;
   const user = data.user ? normalizeUser(data.user) : await getCurrentUser(token);
 
   return { token, user };
+}
+
+function unwrapLoginResponse(response: LoginResponse) {
+  return response.data ?? response;
 }
 
 export async function getCurrentUser(token?: string | null) {

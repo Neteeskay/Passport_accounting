@@ -1,7 +1,9 @@
 import axios, { type AxiosRequestConfig } from "axios";
 import { API_BASE_URL, API_WITH_CREDENTIALS } from "@/lib/api/config";
+import { readPersistedAuthToken } from "@/lib/auth/token-storage";
 
 type ApiRequestOptions = Omit<AxiosRequestConfig, "baseURL" | "url"> & {
+  authMode?: "none" | "optional" | "required";
   body?: BodyInit | null;
   token?: string | null;
 };
@@ -26,14 +28,20 @@ export const apiClient = axios.create({
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
   try {
-    const { body, token, headers, ...config } = options;
+    const { authMode = "required", body, token, headers, ...config } = options;
+    const authToken = resolveAuthToken(token);
+
+    if (authMode === "required" && !authToken) {
+      throw new ApiError("Не найден токен авторизации", 401);
+    }
+
     const response = await apiClient.request<T>({
       ...config,
       url: path,
       data: normalizeBody(body, config.data),
       headers: {
         ...(headers as Record<string, string> | undefined),
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...(authMode !== "none" && authToken ? { Authorization: toBearerToken(authToken) } : {})
       }
     });
 
@@ -45,6 +53,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
     throw error;
   }
+}
+
+function resolveAuthToken(token?: string | null) {
+  return token ?? readPersistedAuthToken();
+}
+
+function toBearerToken(token: string) {
+  return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
 }
 
 function normalizeBody(body: BodyInit | null | undefined, data: unknown) {

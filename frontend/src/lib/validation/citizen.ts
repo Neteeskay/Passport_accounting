@@ -118,7 +118,7 @@ export const citizenFormSchema = z.object({
   departmentCode: departmentCodeText,
   passportNote: z.string().trim(),
   phone: z.string().trim(),
-  photoUrl: z.string().trim(),
+  photoUrl: requiredText("Загрузите фото гражданина"),
   registrationStamps: z.array(registrationStampSchema),
   children: z.array(childRecordSchema),
   marriageRecords: z.array(marriageRecordSchema),
