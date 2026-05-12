@@ -1,11 +1,9 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
-import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { digitsOnly, formatDateInput } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type ForeignPassportSectionProps = {
@@ -65,13 +63,13 @@ export function ForeignPassportSection({
 
             <div className="grid grid-cols-4 gap-4">
               <FormField label="Дата получения" error={errors.foreignPassports?.[index]?.issueDate?.message}>
-                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="18.03.2024" registration={register(`foreignPassports.${index}.issueDate`)} />
+                <Input placeholder="18.03.2024" {...register(`foreignPassports.${index}.issueDate`)} />
               </FormField>
               <FormField label="Серия" error={errors.foreignPassports?.[index]?.series?.message}>
-                <FormattedInput formatter={(value) => digitsOnly(value, 2)} inputMode="numeric" placeholder="72" registration={register(`foreignPassports.${index}.series`)} />
+                <Input placeholder="72" {...register(`foreignPassports.${index}.series`)} />
               </FormField>
               <FormField label="Номер" error={errors.foreignPassports?.[index]?.number?.message}>
-                <FormattedInput formatter={(value) => digitsOnly(value, 7)} inputMode="numeric" placeholder="1234567" registration={register(`foreignPassports.${index}.number`)} />
+                <Input placeholder="1234567" {...register(`foreignPassports.${index}.number`)} />
               </FormField>
               <FormField label="Орган выдачи" error={errors.foreignPassports?.[index]?.authority?.message}>
                 <Input placeholder="МВД России" {...register(`foreignPassports.${index}.authority`)} />
