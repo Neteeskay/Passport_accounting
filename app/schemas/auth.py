@@ -1,46 +1,65 @@
-from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+
+from app.core.api_utils import to_camel
 
 
-class LoginRequest(BaseModel):
-    username: str
+class AuthApiModel(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+    )
+
+
+class LoginRequest(AuthApiModel):
+    username: str = Field(validation_alias=AliasChoices("username", "login"))
     password: str
 
 
-class CreateUserRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=100)
+class CreateUserRequest(AuthApiModel):
+    username: str = Field(
+        min_length=3,
+        max_length=100,
+        validation_alias=AliasChoices("username", "login"),
+        serialization_alias="login",
+    )
     password: str = Field(min_length=6, max_length=255)
     full_name: str = Field(min_length=1, max_length=255)
     role: Literal["admin", "operator"]
     is_active: bool = True
 
 
-class UpdateUserRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=100)
+class UpdateUserRequest(AuthApiModel):
+    username: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=100,
+        validation_alias=AliasChoices("username", "login"),
+        serialization_alias="login",
+    )
     password: str | None = Field(default=None, min_length=6, max_length=255)
-    full_name: str = Field(min_length=1, max_length=255)
-    role: Literal["admin", "operator"]
-    is_active: bool = True
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    role: Literal["admin", "operator"] | None = None
+    is_active: bool | None = None
 
 
-class AuthUserResponse(BaseModel):
-    id: int
-    username: str
+class AuthUserResponse(AuthApiModel):
+    id: str
+    username: str = Field(serialization_alias="login")
     full_name: str
     role: str
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: str
+    updated_at: str
 
 
-class LoginResponse(BaseModel):
+class LoginResponse(AuthApiModel):
     access_token: str
     token_type: str
     expires_in: int
     user: AuthUserResponse
 
 
-class LogoutResponse(BaseModel):
+class LogoutResponse(AuthApiModel):
     message: str

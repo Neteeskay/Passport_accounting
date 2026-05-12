@@ -7,6 +7,7 @@ import sqlite3
 import time
 from uuid import uuid4
 
+from app.core.api_utils import format_timestamp_output
 from app.core.config import get_settings
 
 PASSWORD_SCHEME = "pbkdf2_sha256"
@@ -163,13 +164,13 @@ def _get_active_token_row(connection: sqlite3.Connection, token_id: str) -> sqli
 
 def _serialize_user(row: sqlite3.Row) -> dict:
     return {
-        "id": int(row["id"]),
+        "id": str(row["id"]),
         "username": str(row["username"]),
         "full_name": str(row["full_name"]),
         "role": str(row["role"]),
         "is_active": bool(row["is_active"]),
-        "created_at": str(row["created_at"]),
-        "updated_at": str(row["updated_at"]),
+        "created_at": format_timestamp_output(str(row["created_at"])),
+        "updated_at": format_timestamp_output(str(row["updated_at"])),
     }
 
 
@@ -266,16 +267,21 @@ def list_users() -> list[dict]:
 def update_user(user_id: int, payload: dict) -> dict:
     from app.db.session import get_connection
 
-    username = payload["username"].strip()
-    full_name = payload["full_name"].strip()
-    role = str(payload["role"]).strip()
-    is_active = bool(payload.get("is_active", True))
     password = payload.get("password")
 
     with get_connection() as connection:
         existing_user = find_user_by_id(connection, user_id)
         if existing_user is None:
             raise UserNotFoundError(f"User with id={user_id} was not found.")
+
+        username = str(payload.get("username") or existing_user["username"]).strip()
+        full_name = str(payload.get("full_name") or existing_user["full_name"]).strip()
+        role = str(payload.get("role") or existing_user["role"]).strip()
+        is_active = (
+            bool(payload["is_active"])
+            if payload.get("is_active") is not None
+            else bool(existing_user["is_active"])
+        )
 
         conflicting_user = find_user_by_username(connection, username)
         if conflicting_user is not None and int(conflicting_user["id"]) != user_id:

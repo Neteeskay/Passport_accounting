@@ -195,3 +195,37 @@ GET /api/v1/citizens/{citizen_id}/stamps?stamp_category=registration
 
 - `admin / admin123`
 - `operator / operator123`
+
+## Frontend-Oriented API
+
+- `GET /api/v1/auth/users` -> user management list
+- `POST /api/v1/auth/users` -> create user by admin
+- `PUT /api/v1/auth/users/{user_id}` -> partial or full user update
+- `DELETE /api/v1/auth/users/{user_id}` -> delete user
+- `GET /api/v1/citizens` -> frontend-shaped citizen list
+- `GET /api/v1/citizens/{citizen_id}` -> detailed citizen card
+- `GET /api/v1/citizens/stats` -> total, male, female counters
+- `POST /api/v1/citizens/photo` -> upload photo and get `photoUrl`
+- `GET /api/v1/citizens/registry/pdf` -> registry PDF export
+- `GET /api/v1/citizens/{citizen_id}/pdf` -> single citizen PDF export
+
+Supported list filters:
+
+- `query`
+- `gender`
+- `birthDateFrom`
+- `birthDateTo`
+- `passport`
+- `address`
+
+Citizen payload sections:
+
+- `registrationStamps`
+- `children`
+- `marriageRecords`
+- `militaryRecords`
+- `foreignPassports`
+- `nameChanges`
+- `historyRecords`
+
+The citizen create/update payload accepts dates both in ISO format and in `dd.mm.yyyy`.

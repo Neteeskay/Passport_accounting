@@ -1,6 +1,7 @@
 import json
 import sqlite3
 
+from app.core.api_utils import format_date_output, format_timestamp_output, parse_date_input
 from app.db.session import get_connection
 
 
@@ -10,6 +11,10 @@ class CitizenNotFoundError(Exception):
 
 class StampNotFoundError(Exception):
     """Raised when stamp record does not exist."""
+
+
+class StampValidationError(Exception):
+    """Raised when stamp payload cannot be normalized."""
 
 
 def _clean_text(value: str | None) -> str | None:
@@ -62,11 +67,18 @@ def _resolve_stamp_authority(payload: dict) -> str:
 
 
 def _normalize_stamp_payload(payload: dict) -> dict:
+    try:
+        parsed_date = parse_date_input(str(payload["stamp_placed_at"]))
+    except ValueError as error:
+        raise StampValidationError("Field 'stampPlacedAt' must contain a valid date.") from error
+    if not parsed_date:
+        raise StampValidationError("Field 'stampPlacedAt' must contain a valid date.")
+
     details = _clean_details(payload.get("details"))
     return {
         "stamp_category": _clean_text(payload.get("stamp_category")) or "history",
         "stamp_type": payload["stamp_type"].strip(),
-        "stamp_placed_at": str(payload["stamp_placed_at"]),
+        "stamp_placed_at": parsed_date,
         "stamp_authority": _resolve_stamp_authority(payload),
         "stamp_note": _clean_text(payload.get("stamp_note")),
         "is_active": bool(payload.get("is_active", False)),
@@ -82,6 +94,11 @@ def _serialize_stamp_row(row: sqlite3.Row) -> dict:
     except json.JSONDecodeError:
         stamp["details"] = {}
     stamp["is_active"] = bool(stamp.get("is_active", 0))
+    stamp["id"] = str(stamp["id"])
+    stamp["citizen_id"] = str(stamp["citizen_id"])
+    stamp["stamp_placed_at"] = format_date_output(stamp.get("stamp_placed_at"))
+    stamp["created_at"] = format_timestamp_output(stamp.get("created_at"))
+    stamp["updated_at"] = format_timestamp_output(stamp.get("updated_at"))
     return stamp
 
 

@@ -42,6 +42,31 @@ def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
         ).fetchall()
     }
 
+    if "citizens" in tables:
+        citizen_columns = {
+            str(row["name"])
+            for row in connection.execute("PRAGMA table_info(citizens)").fetchall()
+        }
+
+        if "birth_place" not in citizen_columns:
+            connection.execute("ALTER TABLE citizens ADD COLUMN birth_place TEXT NOT NULL DEFAULT ''")
+
+        if "gender" not in citizen_columns:
+            connection.execute(
+                "ALTER TABLE citizens ADD COLUMN gender TEXT NOT NULL DEFAULT 'male' CHECK (gender IN ('male', 'female'))"
+            )
+
+        if "department_code" not in citizen_columns:
+            connection.execute(
+                "ALTER TABLE citizens ADD COLUMN department_code TEXT NOT NULL DEFAULT ''"
+            )
+
+        if "passport_note" not in citizen_columns:
+            connection.execute("ALTER TABLE citizens ADD COLUMN passport_note TEXT")
+
+        if "phone" not in citizen_columns:
+            connection.execute("ALTER TABLE citizens ADD COLUMN phone TEXT")
+
     if "stamps" not in tables:
         return
 

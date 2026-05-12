@@ -5,6 +5,7 @@ from app.schemas.citizens import StampCategory, StampCreate, StampResponse
 from app.services.stamps import (
     CitizenNotFoundError,
     StampNotFoundError,
+    StampValidationError,
     create_stamp,
     delete_stamp,
     get_stamp,
@@ -44,6 +45,8 @@ def create_citizen_stamp(citizen_id: int, payload: StampCreate) -> StampResponse
         stamp = create_stamp(citizen_id, payload.model_dump())
     except CitizenNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except StampValidationError as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
 
     return StampResponse(**stamp)
 
@@ -54,6 +57,8 @@ def update_citizen_stamp(citizen_id: int, stamp_id: int, payload: StampCreate) -
         stamp = update_stamp(citizen_id, stamp_id, payload.model_dump())
     except (CitizenNotFoundError, StampNotFoundError) as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except StampValidationError as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
 
     return StampResponse(**stamp)
 
