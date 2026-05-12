@@ -1,8 +1,10 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
+import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
+import { formatDateInput } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type ChildrenSectionProps = {
@@ -84,7 +86,7 @@ export function ChildrenSection({ control, register, errors }: ChildrenSectionPr
                 </select>
               </FormField>
               <FormField label="Дата рождения" error={errors.children?.[index]?.birthDate?.message}>
-                <Input placeholder="дд.мм.гггг" {...register(`children.${index}.birthDate`)} />
+                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="дд.мм.гггг" registration={register(`children.${index}.birthDate`)} />
               </FormField>
               <FormField label="Личный код" error={errors.children?.[index]?.personalMark?.message}>
                 <Input placeholder="Подпись/штамп" {...register(`children.${index}.personalMark`)} />
