@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.dependencies.auth import require_roles
-from app.schemas.citizens import StampCreate, StampResponse
+from app.schemas.citizens import StampCategory, StampCreate, StampResponse
 from app.services.stamps import (
     CitizenNotFoundError,
     StampNotFoundError,
@@ -16,9 +16,12 @@ router = APIRouter(tags=["stamps"], dependencies=[Depends(require_roles("admin",
 
 
 @router.get("", response_model=list[StampResponse])
-def list_citizen_stamps(citizen_id: int) -> list[StampResponse]:
+def list_citizen_stamps(
+    citizen_id: int,
+    stamp_category: StampCategory | None = Query(default=None),
+) -> list[StampResponse]:
     try:
-        stamps = list_stamps(citizen_id)
+        stamps = list_stamps(citizen_id, stamp_category=stamp_category)
     except CitizenNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

@@ -1,14 +1,27 @@
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+StampCategory = Literal[
+    "history",
+    "registration",
+    "children",
+    "marriage",
+    "military",
+    "foreign_passport",
+    "name_change",
+]
+
 
 class StampCreate(BaseModel):
+    stamp_category: StampCategory = "history"
     stamp_type: str = Field(min_length=1, max_length=100)
     stamp_placed_at: date
-    stamp_authority: str = Field(min_length=1, max_length=255)
+    stamp_authority: str | None = Field(default=None, max_length=255)
     stamp_note: str | None = Field(default=None, max_length=1000)
+    is_active: bool = False
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class CitizenCreateRequest(BaseModel):
@@ -47,11 +60,15 @@ class CitizenListQuery(BaseModel):
 
 class StampResponse(BaseModel):
     id: int
+    stamp_category: StampCategory
     stamp_type: str
     stamp_placed_at: date
     stamp_authority: str
     stamp_note: str | None = None
+    is_active: bool = False
+    details: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

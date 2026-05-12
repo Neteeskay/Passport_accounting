@@ -65,11 +65,15 @@ STAMP_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS stamps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     citizen_id INTEGER NOT NULL,
+    stamp_category TEXT NOT NULL DEFAULT 'history',
     stamp_type TEXT NOT NULL,
     stamp_placed_at TEXT NOT NULL,
     stamp_authority TEXT NOT NULL,
     stamp_note TEXT,
+    is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+    details_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (citizen_id) REFERENCES citizens(id) ON DELETE CASCADE
 );
 """

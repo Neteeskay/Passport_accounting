@@ -146,6 +146,42 @@ CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 - сведения о штампах;
 - фотографию, если путь к файлу существует и изображение доступно.
 
+## Структурированные штампы
+
+Маршруты `stamps` теперь поддерживают несколько категорий записей через поле `stamp_category`:
+
+- `history`
+- `registration`
+- `children`
+- `marriage`
+- `military`
+- `foreign_passport`
+- `name_change`
+
+Базовый формат payload:
+
+```json
+{
+  "stamp_category": "history",
+  "stamp_type": "Первичный (14 лет)",
+  "stamp_placed_at": "2026-03-28",
+  "stamp_authority": "ОВД Октябрьского района",
+  "stamp_note": "Первичная выдача паспорта",
+  "is_active": true,
+  "details": {
+    "series": "4510",
+    "number": "123456",
+    "department_code": "770-001"
+  }
+}
+```
+
+Для выборки только одной вкладки можно использовать фильтр:
+
+```text
+GET /api/v1/citizens/{citizen_id}/stamps?stamp_category=registration
+```
+
 ## Ближайшие шаги
 
 - расширить управление пользователями;

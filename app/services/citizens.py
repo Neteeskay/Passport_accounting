@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from app.db.session import get_connection
@@ -32,6 +33,71 @@ def _clean_text(value: str | None) -> str | None:
     return cleaned or None
 
 
+def _clean_details(details: dict | None) -> dict:
+    if not isinstance(details, dict):
+        return {}
+
+    cleaned: dict = {}
+    for key, value in details.items():
+        if not isinstance(key, str):
+            continue
+        if isinstance(value, str):
+            normalized = value.strip()
+            cleaned[key] = normalized if normalized else None
+        else:
+            cleaned[key] = value
+
+    return cleaned
+
+
+def _resolve_stamp_authority(stamp: dict) -> str:
+    authority = _clean_text(stamp.get("stamp_authority"))
+    if authority:
+        return authority
+
+    details = _clean_details(stamp.get("details"))
+    fallback_candidates = (
+        details.get("issuing_authority"),
+        details.get("authority_name"),
+        details.get("migration_department"),
+        details.get("military_authority"),
+        details.get("registry_office"),
+        details.get("certified_by"),
+        details.get("signed_by"),
+        details.get("personal_code"),
+    )
+
+    for candidate in fallback_candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+
+    return "—"
+
+
+def _normalize_stamp_payload(stamp: dict) -> dict:
+    details = _clean_details(stamp.get("details"))
+    return {
+        "stamp_category": _clean_text(stamp.get("stamp_category")) or "history",
+        "stamp_type": stamp["stamp_type"].strip(),
+        "stamp_placed_at": str(stamp["stamp_placed_at"]),
+        "stamp_authority": _resolve_stamp_authority(stamp),
+        "stamp_note": _clean_text(stamp.get("stamp_note")),
+        "is_active": bool(stamp.get("is_active", False)),
+        "details_json": json.dumps(details, ensure_ascii=False, separators=(",", ":")),
+    }
+
+
+def _serialize_stamp_row(row: sqlite3.Row) -> dict:
+    stamp = dict(row)
+    details_json = stamp.pop("details_json", "{}")
+    try:
+        stamp["details"] = json.loads(details_json or "{}")
+    except json.JSONDecodeError:
+        stamp["details"] = {}
+    stamp["is_active"] = bool(stamp.get("is_active", 0))
+    return stamp
+
+
 def _normalize_citizen_payload(payload: dict) -> dict:
     return {
         "last_name": payload["last_name"].strip(),
@@ -64,7 +130,17 @@ def _user_exists(connection: sqlite3.Connection, user_id: int) -> bool:
 def _fetch_stamps(connection: sqlite3.Connection, citizen_id: int) -> list[dict]:
     rows = connection.execute(
         """
-        SELECT id, stamp_type, stamp_placed_at, stamp_authority, stamp_note, created_at
+        SELECT
+            id,
+            stamp_category,
+            stamp_type,
+            stamp_placed_at,
+            stamp_authority,
+            stamp_note,
+            is_active,
+            details_json,
+            created_at,
+            updated_at
         FROM stamps
         WHERE citizen_id = ?
         ORDER BY id ASC
@@ -72,7 +148,7 @@ def _fetch_stamps(connection: sqlite3.Connection, citizen_id: int) -> list[dict]
         (citizen_id,),
     ).fetchall()
 
-    return [dict(row) for row in rows]
+    return [_serialize_stamp_row(row) for row in rows]
 
 
 def _fetch_citizen(connection: sqlite3.Connection, citizen_id: int) -> dict:
@@ -173,23 +249,30 @@ def _ensure_creator_exists(connection: sqlite3.Connection, creator_id: int | Non
 
 def _insert_stamps(connection: sqlite3.Connection, citizen_id: int, stamps: list[dict]) -> None:
     for stamp in stamps:
+        normalized_stamp = _normalize_stamp_payload(stamp)
         connection.execute(
             """
             INSERT INTO stamps (
                 citizen_id,
+                stamp_category,
                 stamp_type,
                 stamp_placed_at,
                 stamp_authority,
-                stamp_note
+                stamp_note,
+                is_active,
+                details_json
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 citizen_id,
-                stamp["stamp_type"].strip(),
-                str(stamp["stamp_placed_at"]),
-                stamp["stamp_authority"].strip(),
-                _clean_text(stamp.get("stamp_note")),
+                normalized_stamp["stamp_category"],
+                normalized_stamp["stamp_type"],
+                normalized_stamp["stamp_placed_at"],
+                normalized_stamp["stamp_authority"],
+                normalized_stamp["stamp_note"],
+                int(normalized_stamp["is_active"]),
+                normalized_stamp["details_json"],
             ),
         )
 

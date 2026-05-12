@@ -30,10 +30,57 @@ def get_connection() -> sqlite3.Connection:
     return connection
 
 
+def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
+    tables = {
+        str(row["name"])
+        for row in connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+            """
+        ).fetchall()
+    }
+
+    if "stamps" not in tables:
+        return
+
+    stamp_columns = {
+        str(row["name"])
+        for row in connection.execute("PRAGMA table_info(stamps)").fetchall()
+    }
+
+    if "stamp_category" not in stamp_columns:
+        connection.execute(
+            "ALTER TABLE stamps ADD COLUMN stamp_category TEXT NOT NULL DEFAULT 'history'"
+        )
+
+    if "is_active" not in stamp_columns:
+        connection.execute(
+            "ALTER TABLE stamps ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1))"
+        )
+
+    if "details_json" not in stamp_columns:
+        connection.execute(
+            "ALTER TABLE stamps ADD COLUMN details_json TEXT NOT NULL DEFAULT '{}'"
+        )
+
+    if "updated_at" not in stamp_columns:
+        connection.execute("ALTER TABLE stamps ADD COLUMN updated_at TEXT")
+        connection.execute(
+            "UPDATE stamps SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL"
+        )
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stamps_category ON stamps(stamp_category)"
+    )
+
+
 def initialize_database() -> None:
     with get_connection() as connection:
         for statement in ALL_SCHEMA_STATEMENTS:
             connection.execute(statement)
+        _apply_runtime_migrations(connection)
         seed_default_users(connection)
         connection.commit()
 
