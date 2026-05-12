@@ -1,10 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
-import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
-import { digitsOnly, formatDateInput, formatDepartmentCode } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type RegistrationSectionProps = {
@@ -81,7 +79,7 @@ export function RegistrationSection({ control, register, errors }: RegistrationS
                 </select>
               </FormField>
               <FormField label="Дата" error={errors.registrationStamps?.[index]?.date?.message}>
-                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="28.03.2026" registration={register(`registrationStamps.${index}.date`)} />
+                <Input placeholder="28.03.2026" {...register(`registrationStamps.${index}.date`)} />
               </FormField>
             </div>
 
@@ -105,10 +103,10 @@ export function RegistrationSection({ control, register, errors }: RegistrationS
                 <Input placeholder="ул. Пушкина" {...register(`registrationStamps.${index}.street`)} />
               </FormField>
               <FormField label="Дом" error={errors.registrationStamps?.[index]?.house?.message}>
-                <FormattedInput formatter={(value) => digitsOnly(value, 4)} inputMode="numeric" placeholder="30" registration={register(`registrationStamps.${index}.house`)} />
+                <Input placeholder="30" {...register(`registrationStamps.${index}.house`)} />
               </FormField>
               <FormField label="Квартира">
-                <FormattedInput formatter={(value) => digitsOnly(value, 4)} inputMode="numeric" placeholder="30" registration={register(`registrationStamps.${index}.apartment`)} />
+                <Input placeholder="30" {...register(`registrationStamps.${index}.apartment`)} />
               </FormField>
             </div>
 
@@ -120,7 +118,7 @@ export function RegistrationSection({ control, register, errors }: RegistrationS
                 />
               </FormField>
               <FormField label="Код подразделения" error={errors.registrationStamps?.[index]?.departmentCode?.message}>
-                <FormattedInput formatter={formatDepartmentCode} inputMode="numeric" placeholder="460-026" registration={register(`registrationStamps.${index}.departmentCode`)} />
+                <Input placeholder="460-026" {...register(`registrationStamps.${index}.departmentCode`)} />
               </FormField>
               <FormField label="Заверил" error={errors.registrationStamps?.[index]?.certifier?.message}>
                 <Input placeholder="Подпись / должность" {...register(`registrationStamps.${index}.certifier`)} />

@@ -1,10 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { useFieldArray, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArraySectionToolbar } from "@/components/citizens/form/array-section-toolbar";
-import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { Input } from "@/components/ui/input";
-import { formatDateInput } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type NameChangeSectionProps = {
@@ -66,7 +64,7 @@ export function NameChangeSection({ control, register, errors }: NameChangeSecti
 
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Дата" error={errors.nameChanges?.[index]?.date?.message}>
-                <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="дд.мм.гггг" registration={register(`nameChanges.${index}.date`)} />
+                <Input placeholder="дд.мм.гггг" {...register(`nameChanges.${index}.date`)} />
               </FormField>
               <FormField label="Причина" error={errors.nameChanges?.[index]?.reason?.message}>
                 <Input placeholder="Вступление в брак" {...register(`nameChanges.${index}.reason`)} />

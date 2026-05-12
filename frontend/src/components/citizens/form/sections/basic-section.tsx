@@ -1,11 +1,9 @@
 import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import { FormattedInput } from "@/components/citizens/form/formatted-input";
 import { FormField } from "@/components/citizens/form/form-field";
 import { FormSection } from "@/components/citizens/form/form-section";
 import { PhotoUploader } from "@/components/citizens/photo-uploader";
 import { Input } from "@/components/ui/input";
-import { digitsOnly, formatDateInput, formatDepartmentCode } from "@/lib/utils/input-format";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 
 type BasicSectionProps = {
@@ -41,7 +39,7 @@ export function BasicSection({ control, register, errors, setValue }: BasicSecti
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Дата рождения" error={errors.birthDate?.message}>
-              <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="13.03.1990" registration={register("birthDate")} />
+              <Input placeholder="13.03.1990" {...register("birthDate")} />
             </FormField>
             <FormField label="Пол" error={errors.gender?.message}>
               <select
@@ -63,19 +61,19 @@ export function BasicSection({ control, register, errors, setValue }: BasicSecti
       <FormSection title="Паспортные данные">
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Серия" error={errors.passportSeries?.message}>
-            <FormattedInput formatter={(value) => digitsOnly(value, 4)} inputMode="numeric" placeholder="2232" registration={register("passportSeries")} />
+            <Input placeholder="2232" {...register("passportSeries")} />
           </FormField>
           <FormField label="Номер" error={errors.passportNumber?.message}>
-            <FormattedInput formatter={(value) => digitsOnly(value, 6)} inputMode="numeric" placeholder="323232" registration={register("passportNumber")} />
+            <Input placeholder="323232" {...register("passportNumber")} />
           </FormField>
           <FormField label="Код подразделения" error={errors.departmentCode?.message}>
-            <FormattedInput formatter={formatDepartmentCode} inputMode="numeric" placeholder="323-232" registration={register("departmentCode")} />
+            <Input placeholder="323-232" {...register("departmentCode")} />
           </FormField>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Дата выдачи" error={errors.passportIssuedDate?.message}>
-            <FormattedInput formatter={formatDateInput} inputMode="numeric" placeholder="18.03.2015" registration={register("passportIssuedDate")} />
+            <Input placeholder="18.03.2015" {...register("passportIssuedDate")} />
           </FormField>
           <FormField label="Кем выдан" error={errors.passportIssuedBy?.message}>
             <Input placeholder="ГУ МВД России по Ростовской области" {...register("passportIssuedBy")} />
