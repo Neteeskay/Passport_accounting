@@ -1,5 +1,5 @@
-import axios, { AxiosError, type AxiosRequestConfig } from "axios";
-import { API_BASE_URL } from "@/lib/api/config";
+import axios, { type AxiosRequestConfig } from "axios";
+import { API_BASE_URL, API_WITH_CREDENTIALS } from "@/lib/api/config";
 
 type ApiRequestOptions = Omit<AxiosRequestConfig, "baseURL" | "url"> & {
   body?: BodyInit | null;
@@ -18,7 +18,7 @@ export class ApiError extends Error {
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true,
+  withCredentials: API_WITH_CREDENTIALS,
   headers: {
     Accept: "application/json"
   }
@@ -39,7 +39,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
     return response.data;
   } catch (error) {
-    if (error instanceof AxiosError) {
+    if (axios.isAxiosError(error)) {
       throw new ApiError(readAxiosErrorMessage(error), error.response?.status ?? 0);
     }
 
@@ -63,11 +63,17 @@ function normalizeBody(body: BodyInit | null | undefined, data: unknown) {
   return body;
 }
 
-function readAxiosErrorMessage(error: AxiosError) {
-  const data = error.response?.data as { detail?: string; message?: string } | string | undefined;
+function readAxiosErrorMessage(error: unknown) {
+  const data = axios.isAxiosError(error)
+    ? (error.response?.data as { detail?: string | Array<{ msg?: string }>; message?: string } | string | undefined)
+    : undefined;
 
   if (typeof data === "string") {
     return data;
+  }
+
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((item) => item.msg).filter(Boolean).join(". ") || "Ошибка валидации запроса";
   }
 
   return data?.detail ?? data?.message ?? "Ошибка запроса";

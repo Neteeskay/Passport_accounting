@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/client";
+import { ApiError, apiRequest } from "@/lib/api/client";
 import type { LoginFormValues } from "@/lib/validation/auth";
 import type { User, UserRole } from "@/types/user";
 
@@ -17,6 +17,8 @@ type ApiUser = {
 type LoginResponse = {
   access_token?: string;
   token?: string;
+  token_type?: string;
+  expires_in?: number;
   user?: ApiUser;
 };
 
@@ -31,7 +33,7 @@ export async function checkSystemHealth() {
 export async function loginByPassword(values: LoginFormValues) {
   const data = await apiRequest<LoginResponse>("/api/v1/auth/login", {
     method: "POST",
-    body: JSON.stringify(values)
+    data: toLoginPayload(values)
   });
   const token = data.access_token ?? data.token ?? null;
   const user = data.user ? normalizeUser(data.user) : await getCurrentUser(token);
@@ -40,6 +42,8 @@ export async function loginByPassword(values: LoginFormValues) {
 }
 
 export async function getCurrentUser(token?: string | null) {
+  assertToken(token);
+
   const data = await apiRequest<ApiUser>("/api/v1/auth/me", {
     token
   });
@@ -48,10 +52,25 @@ export async function getCurrentUser(token?: string | null) {
 }
 
 export async function logoutSession(token?: string | null) {
+  assertToken(token);
+
   await apiRequest<void>("/api/v1/auth/logout", {
     method: "POST",
     token
   });
+}
+
+function toLoginPayload(values: LoginFormValues) {
+  return {
+    username: values.login,
+    password: values.password
+  };
+}
+
+function assertToken(token?: string | null) {
+  if (!token) {
+    throw new ApiError("Не найден токен авторизации", 401);
+  }
 }
 
 function normalizeUser(user: ApiUser): User {

@@ -18,6 +18,14 @@ export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessio
   const logout = useAuthStore((state) => state.logout);
 
   const refreshCurrentUser = useCallback(async () => {
+    if (!token) {
+      if (redirectOnUnauthorized) {
+        router.push("/login");
+      }
+
+      return;
+    }
+
     try {
       const currentUser = await getCurrentUser(token);
       setUser(currentUser);
@@ -34,7 +42,9 @@ export function useAuthSession({ redirectOnUnauthorized = false }: UseAuthSessio
 
   const endSession = useCallback(async () => {
     try {
-      await logoutSession(token);
+      if (token) {
+        await logoutSession(token);
+      }
     } finally {
       logout();
       router.push("/login");
