@@ -1,8 +1,8 @@
 "use client";
 
 import { Download, UsersRound } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuthSession } from "@/components/auth/use-auth-session";
 import { CitizenCard } from "@/components/citizens/citizen-card";
 import { CitizenDetailModal } from "@/components/citizens/detail/citizen-detail-modal";
 import { CitizenFormModal } from "@/components/citizens/form/citizen-form-modal";
@@ -10,31 +10,57 @@ import { CitizensRegistryModal } from "@/components/citizens/registry/citizens-r
 import { CitizensToolbar } from "@/components/citizens/citizens-toolbar";
 import { StatCard } from "@/components/citizens/stat-card";
 import { AppShell } from "@/components/layout/app-shell";
+import { createCitizen, getCitizens, getCitizenWithStamps, updateCitizen } from "@/lib/api/citizens";
+import { ApiError } from "@/lib/api/client";
 import { mockCitizens } from "@/lib/mock-data/citizens";
-import { buildCitizenFromForm, updateCitizenFromForm } from "@/lib/utils/citizen-form";
-import { useAuthStore } from "@/store/auth-store";
 import type { CitizenFormValues } from "@/lib/validation/citizen";
 import type { Citizen } from "@/types/citizen";
 
 export function CitizensPageClient() {
-  const router = useRouter();
-  const currentUser = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const { endSession, token, user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
   const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
   const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
+  const [isLoadingCitizens, setIsLoadingCitizens] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  const loadCitizens = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      setIsLoadingCitizens(true);
+      setActionError("");
+      setCitizens(await getCitizens(token, { limit: 100, sortBy: "updated_at", sortOrder: "desc" }));
+    } catch (error) {
+      setActionError(getReadableApiError(error, "Не удалось загрузить граждан с backend"));
+    } finally {
+      setIsLoadingCitizens(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadCitizens();
+  }, [loadCitizens]);
 
   const totalCount = citizens.length;
   const maleCount = citizens.filter((citizen) => citizen.gender === "male").length;
   const femaleCount = citizens.filter((citizen) => citizen.gender === "female").length;
 
-  const handleCreateCitizen = (values: CitizenFormValues) => {
-    const nextCitizen = buildCitizenFromForm(values);
+  const handleCreateCitizen = async (values: CitizenFormValues) => {
+    try {
+      setActionError("");
+      const nextCitizen = await createCitizen(values, token);
 
-    setCitizens((current) => [nextCitizen, ...current]);
-    setIsCreateOpen(false);
+      setCitizens((current) => [nextCitizen, ...current]);
+      setIsCreateOpen(false);
+    } catch (error) {
+      setActionError(getReadableApiError(error, "Не удалось создать карточку гражданина"));
+      throw error;
+    }
   };
 
   const handleDeleteCitizen = (citizen: Citizen) => {
@@ -45,32 +71,50 @@ export function CitizensPageClient() {
     }
   };
 
-  const handleUpdateCitizen = (values: CitizenFormValues) => {
+  const handleUpdateCitizen = async (values: CitizenFormValues) => {
     if (!editingCitizen) {
       return;
     }
 
-    const updatedCitizen = updateCitizenFromForm(editingCitizen, values);
+    try {
+      setActionError("");
+      const updatedCitizen = await updateCitizen(editingCitizen.id, values, token);
 
-    setCitizens((current) =>
-      current.map((citizen) => (citizen.id === editingCitizen.id ? updatedCitizen : citizen))
-    );
-    setEditingCitizen(null);
+      setCitizens((current) =>
+        current.map((citizen) => (citizen.id === editingCitizen.id ? updatedCitizen : citizen))
+      );
+      setEditingCitizen(null);
+    } catch (error) {
+      setActionError(getReadableApiError(error, "Не удалось сохранить изменения"));
+      throw error;
+    }
   };
 
-  const isAdmin = currentUser?.role === "admin" || !currentUser;
+  const handleViewCitizen = async (citizen: Citizen) => {
+    setSelectedCitizen(citizen);
+
+    try {
+      const detailedCitizen = await getCitizenWithStamps(citizen, token);
+
+      setSelectedCitizen(detailedCitizen);
+      setCitizens((current) =>
+        current.map((item) => (item.id === detailedCitizen.id ? detailedCitizen : item))
+      );
+    } catch {
+      // Просмотр основных данных остаётся доступным, даже если история штампов временно недоступна.
+    }
+  };
+
+  const isAdmin = currentUser?.role === "admin";
   const roleLabel = currentUser?.role === "operator" ? "Оператор" : "Администратор";
 
   return (
     <>
       <AppShell
         onAddCitizen={() => setIsCreateOpen(true)}
-        onLogout={() => {
-          logout();
-          router.push("/login");
-        }}
+        onLogout={() => void endSession()}
         showAdminLink={isAdmin}
-        userName={currentUser?.fullName ?? "Администратор"}
+        userName={currentUser?.fullName ?? "Пользователь"}
         userRole={roleLabel}
       >
         <main>
@@ -90,6 +134,18 @@ export function CitizensPageClient() {
 
           <CitizensToolbar />
 
+          {actionError ? (
+            <div className="mt-4 rounded-[14px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-[14px] text-destructive">
+              {actionError}
+            </div>
+          ) : null}
+
+          {isLoadingCitizens ? (
+            <div className="mt-4 rounded-[14px] border border-border bg-card px-4 py-3 text-[14px] text-muted-foreground">
+              Загружаем граждан из backend...
+            </div>
+          ) : null}
+
           <section className="mt-6">
             <div className="flex flex-col gap-4">
               {citizens.map((citizen) => (
@@ -98,7 +154,7 @@ export function CitizensPageClient() {
                   key={citizen.id}
                   onDelete={isAdmin ? handleDeleteCitizen : undefined}
                   onEdit={setEditingCitizen}
-                  onView={setSelectedCitizen}
+                  onView={(citizen) => void handleViewCitizen(citizen)}
                 />
               ))}
             </div>
@@ -131,4 +187,12 @@ export function CitizensPageClient() {
       />
     </>
   );
+}
+
+function getReadableApiError(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.message) {
+    return error.message;
+  }
+
+  return fallback;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BasicSection } from "@/components/citizens/form/sections/basic-section";
 import { ChildrenSection } from "@/components/citizens/form/sections/children-section";
@@ -22,7 +22,7 @@ import {
 type CitizenFormProps = {
   defaultValues?: CitizenFormValues;
   onCancel: () => void;
-  onSubmitSuccess: (values: CitizenFormValues) => void;
+  onSubmitSuccess: (values: CitizenFormValues) => void | Promise<void>;
   submitLabel?: string;
 };
 
@@ -50,12 +50,10 @@ export function CitizenForm({
     setActiveTab("basic");
   }, [defaultValues, reset]);
 
-  const onSubmit = (values: CitizenFormValues) => {
-    startTransition(() => {
-      onSubmitSuccess(values);
-      reset(defaultValues);
-      setActiveTab("basic");
-    });
+  const onSubmit = async (values: CitizenFormValues) => {
+    await onSubmitSuccess(values);
+    reset(defaultValues);
+    setActiveTab("basic");
   };
 
   return (

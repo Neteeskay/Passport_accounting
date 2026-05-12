@@ -3,20 +3,20 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useAuthSession } from "@/components/auth/use-auth-session";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { mockUsers } from "@/lib/mock-data/users";
-import { useAuthStore } from "@/store/auth-store";
 import type { User, UserRole } from "@/types/user";
 import { UserCreateForm } from "./user-create-form";
 import { UserRow } from "./user-row";
 
 export function UserManagementPage() {
-  const currentUser = useAuthStore((state) => state.user);
+  const { user: currentUser } = useAuthSession({ redirectOnUnauthorized: true });
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [isCreating, setIsCreating] = useState(false);
 
-  const isAdmin = currentUser?.role === "admin" || !currentUser;
+  const isAdmin = currentUser?.role === "admin";
 
   const handleRoleChange = (userId: string, role: UserRole) => {
     setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role } : user)));

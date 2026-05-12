@@ -7,7 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { mockUsers } from "@/lib/mock-data/users";
+import { checkServiceHealth, checkSystemHealth, loginByPassword } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -25,23 +26,26 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       login: "admin",
-      password: "admin"
+      password: "admin123"
     }
   });
 
-  const onSubmit = (values: LoginFormValues) => {
-    const user = mockUsers.find(
-      (item) => item.login === values.login && item.password === values.password
-    );
+  const onSubmit = async (values: LoginFormValues) => {
+    try {
+      setAuthError("");
+      await Promise.any([checkServiceHealth(), checkSystemHealth()]);
+      const session = await loginByPassword(values);
 
-    if (!user) {
-      setAuthError("Неверный логин или пароль");
-      return;
+      login(session.user, session.token);
+      router.push("/citizens");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setAuthError("Неверный логин или пароль");
+        return;
+      }
+
+      setAuthError("Сервис авторизации недоступен или вернул ошибку");
     }
-
-    setAuthError("");
-    login(user);
-    router.push("/citizens");
   };
 
   return (
