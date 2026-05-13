@@ -72,10 +72,7 @@
 - `React 19`
 - `TypeScript`
 - `Tailwind CSS`
-- `React Hook Form`
-- `Zod`
-- `Axios`
-- `Zustand`
+
 
 ### Backend
 
@@ -83,8 +80,7 @@
 - `FastAPI`
 - `Pydantic`
 - `SQLite`
-- `reportlab`
-- `python-multipart`
+
 
 ## Архитектура решения
 
